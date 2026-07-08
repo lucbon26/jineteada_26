@@ -8,7 +8,7 @@ from app.core.database import Base, engine
 from app.core.logger import logger
 
 
-Base.metadata.create_all(bind=engine)
+from app.core.database import Base, engine
 
 app = FastAPI(
     title=settings.APP_NAME,
