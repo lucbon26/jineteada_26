@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logger import logger
-from app.routers import auth
+from app.routers import auth, campeonatos
 from app.services.bootstrap import crear_admin_inicial
 
 
@@ -22,6 +22,8 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(campeonatos.router)
+
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -50,14 +52,18 @@ def startup_event():
 def dashboard(request: Request):
     """
     Dashboard principal protegido por sesión.
-    Si no hay usuario logueado, redirige al login.
+    Si no hay usuario autenticado, redirige al login.
     """
 
     if not request.session.get("usuario_id"):
         return RedirectResponse("/login", status_code=303)
 
     return templates.TemplateResponse(
-        request,
-        "dashboards.html",
-        {}
+        request=request,
+        name="dashboards.html",
+        context={
+            "app_name": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "usuario_nombre": request.session.get("usuario_nombre", "Administrador"),
+        },
     )
