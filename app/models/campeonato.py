@@ -1,9 +1,11 @@
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+
 
 
 class Campeonato(Base):
@@ -51,3 +53,10 @@ class Campeonato(Base):
         nullable=False,
         default=datetime.now,
     )
+    
+    fechas = relationship(
+    "Fecha",
+    back_populates="campeonato",
+    cascade="all, delete-orphan",
+    order_by="Fecha.fecha",
+)

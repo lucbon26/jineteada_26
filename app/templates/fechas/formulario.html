@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ accion }} fecha
+{% endblock %}
+
+{% block page_title %}
+{{ accion }} fecha
+{% endblock %}
+
+{% block contenido %}
+
+<nav class="mb-3">
+    <a href="/">Inicio</a>
+    /
+    <a href="/campeonatos">Campeonatos</a>
+    /
+    <a href="/campeonatos/{{ campeonato.id }}">
+        {{ campeonato.nombre }}
+    </a>
+    /
+    <strong>{{ accion }} fecha</strong>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-xl-9">
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                {% if fecha_evento %}
+                <form method="post" action="/fechas/{{ fecha_evento.id }}/editar">
+                    {% else %}
+                    <form method="post" action="/fechas/nueva/{{ campeonato.id }}">
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Nombre de la fecha
+                            </label>
+
+                            <input type="text" name="nombre" class="form-control" placeholder="Ejemplo: 1.ª Fecha"
+                                required value="{{ fecha_evento.nombre if fecha_evento else '' }}">
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    Fecha
+                                </label>
+
+                                <input type="date" name="fecha" class="form-control" required
+                                    value="{{ fecha_evento.fecha.isoformat() if fecha_evento else '' }}">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    Localidad
+                                </label>
+
+                                <input type="text" name="localidad" class="form-control" required
+                                    value="{{ fecha_evento.localidad if fecha_evento else '' }}">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    Provincia
+                                </label>
+
+                                <input type="text" name="provincia" class="form-control"
+                                    value="{{ fecha_evento.provincia if fecha_evento and fecha_evento.provincia else '' }}">
+                            </div>
+
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Predio o lugar
+                                </label>
+
+                                <input type="text" name="lugar" class="form-control"
+                                    value="{{ fecha_evento.lugar if fecha_evento and fecha_evento.lugar else '' }}">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Organizador
+                                </label>
+
+                                <input type="text" name="organizador" class="form-control"
+                                    value="{{ fecha_evento.organizador if fecha_evento and fecha_evento.organizador else '' }}">
+                            </div>
+
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Estado
+                            </label>
+
+                            <select name="estado" class="form-select">
+                                <option value="programada" {% if not fecha_evento or fecha_evento.estado=="programada"
+                                    %}selected{% endif %}>
+                                    Programada
+                                </option>
+
+                                <option value="en_curso" {% if fecha_evento and fecha_evento.estado=="en_curso"
+                                    %}selected{% endif %}>
+                                    En curso
+                                </option>
+
+                                <option value="finalizada" {% if fecha_evento and fecha_evento.estado=="finalizada"
+                                    %}selected{% endif %}>
+                                    Finalizada
+                                </option>
+
+                                <option value="suspendida" {% if fecha_evento and fecha_evento.estado=="suspendida"
+                                    %}selected{% endif %}>
+                                    Suspendida
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">
+                                Observaciones
+                            </label>
+
+                            <textarea name="observaciones" class="form-control"
+                                rows="4">{{ fecha_evento.observaciones if fecha_evento and fecha_evento.observaciones else '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar fecha
+                            </button>
+                        </div>
+
+                    </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

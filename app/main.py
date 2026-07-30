@@ -9,7 +9,7 @@ from app.core.database import SessionLocal
 from app.core.logger import logger
 from app.routers import auth, campeonatos
 from app.services.bootstrap import crear_admin_inicial
-
+from app.routers import fechas
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -23,6 +23,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(campeonatos.router)
+app.include_router(fechas.router)
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -52,7 +53,6 @@ def startup_event():
 def dashboard(request: Request):
     """
     Dashboard principal protegido por sesión.
-    Si no hay usuario autenticado, redirige al login.
     """
 
     if not request.session.get("usuario_id"):
@@ -62,8 +62,10 @@ def dashboard(request: Request):
         request=request,
         name="dashboards.html",
         context={
-            "app_name": settings.APP_NAME,
-            "version": settings.APP_VERSION,
-            "usuario_nombre": request.session.get("usuario_nombre", "Administrador"),
+            "menu_activo": "inicio",
+            "usuario_nombre": request.session.get(
+                "usuario_nombre",
+                "Administrador",
+            ),
         },
     )

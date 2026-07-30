@@ -1,138 +1,116 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block title %}
+{{ accion }} campeonato
+{% endblock %}
 
-    <title>{{ accion }} campeonato</title>
+{% block page_title %}
+{{ accion }} campeonato
+{% endblock %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+{% block contenido %}
 
-<body class="bg-light">
+<div class="row justify-content-center">
+    <div class="col-xl-8">
 
-    <nav class="navbar navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a href="/" class="navbar-brand">
-                🐎 Sistema de Gestión de Jineteadas
-            </a>
+        <div class="mb-4">
+            <h1 class="fw-bold">
+                {{ accion }} campeonato
+            </h1>
+
+            <p class="text-muted">
+                Completá la información general del campeonato.
+            </p>
         </div>
-    </nav>
 
-    <main class="container py-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
 
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
+                {% if campeonato %}
+                <form method="post" action="/campeonatos/{{ campeonato.id }}/editar">
+                    {% else %}
+                    <form method="post" action="/campeonatos/nuevo">
+                        {% endif %}
 
-                <div class="mb-4">
-                    <h1 class="fw-bold">
-                        {{ accion }} campeonato
-                    </h1>
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label">
+                                Nombre del campeonato
+                            </label>
 
-                    <p class="text-muted">
-                        Completá la información general del campeonato.
-                    </p>
-                </div>
+                            <input type="text" class="form-control" id="nombre" name="nombre" maxlength="150" required
+                                autofocus value="{{ campeonato.nombre if campeonato else '' }}">
+                        </div>
 
-                {% if error %}
-                <div class="alert alert-danger">
-                    {{ error }}
-                </div>
-                {% endif %}
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label">
+                                Descripción
+                            </label>
 
-                <div class="card shadow-sm">
-                    <div class="card-body p-4">
+                            <textarea class="form-control" id="descripcion" name="descripcion"
+                                rows="3">{{ campeonato.descripcion if campeonato and campeonato.descripcion else '' }}</textarea>
+                        </div>
 
-                        {% if campeonato %}
-                        <form method="post" action="/campeonatos/{{ campeonato.id }}/editar">
-                            {% else %}
-                            <form method="post" action="/campeonatos/nuevo">
-                                {% endif %}
+                        <div class="row">
 
-                                <div class="mb-3">
-                                    <label for="nombre" class="form-label">
-                                        Nombre del campeonato
-                                    </label>
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_inicio" class="form-label">
+                                    Fecha de inicio
+                                </label>
 
-                                    <input type="text" class="form-control" id="nombre" name="nombre" maxlength="150"
-                                        required autofocus value="{{ campeonato.nombre if campeonato else '' }}">
-                                </div>
+                                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio"
+                                    value="{{ campeonato.fecha_inicio.isoformat() if campeonato and campeonato.fecha_inicio else '' }}">
+                            </div>
 
-                                <div class="mb-3">
-                                    <label for="descripcion" class="form-label">
-                                        Descripción
-                                    </label>
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_fin" class="form-label">
+                                    Fecha de finalización
+                                </label>
 
-                                    <textarea class="form-control" id="descripcion" name="descripcion"
-                                        rows="3">{{ campeonato.descripcion if campeonato and campeonato.descripcion else '' }}</textarea>
-                                </div>
+                                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin"
+                                    value="{{ campeonato.fecha_fin.isoformat() if campeonato and campeonato.fecha_fin else '' }}">
+                            </div>
 
-                                <div class="row">
+                        </div>
 
-                                    <div class="col-md-6 mb-3">
-                                        <label for="fecha_inicio" class="form-label">
-                                            Fecha de inicio
-                                        </label>
+                        <div class="mb-4">
+                            <label for="estado" class="form-label">
+                                Estado
+                            </label>
 
-                                        <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio"
-                                            value="{{ campeonato.fecha_inicio.isoformat() if campeonato and campeonato.fecha_inicio else '' }}">
-                                    </div>
+                            <select class="form-select" id="estado" name="estado">
+                                <option value="borrador" {% if not campeonato or campeonato.estado=="borrador"
+                                    %}selected{% endif %}>
+                                    Borrador
+                                </option>
 
-                                    <div class="col-md-6 mb-3">
-                                        <label for="fecha_fin" class="form-label">
-                                            Fecha de finalización
-                                        </label>
+                                <option value="activo" {% if campeonato and campeonato.estado=="activo" %}selected{%
+                                    endif %}>
+                                    Activo
+                                </option>
 
-                                        <input type="date" class="form-control" id="fecha_fin" name="fecha_fin"
-                                            value="{{ campeonato.fecha_fin.isoformat() if campeonato and campeonato.fecha_fin else '' }}">
-                                    </div>
+                                <option value="finalizado" {% if campeonato and campeonato.estado=="finalizado"
+                                    %}selected{% endif %}>
+                                    Finalizado
+                                </option>
+                            </select>
+                        </div>
 
-                                </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="/campeonatos" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
 
-                                <div class="mb-4">
-                                    <label for="estado" class="form-label">
-                                        Estado
-                                    </label>
+                            <button type="submit" class="btn btn-primary">
+                                Guardar campeonato
+                            </button>
+                        </div>
 
-                                    <select class="form-select" id="estado" name="estado">
-                                        <option value="borrador" {% if not campeonato or campeonato.estado=="borrador"
-                                            %}selected{% endif %}>
-                                            Borrador
-                                        </option>
-
-                                        <option value="activo" {% if campeonato and campeonato.estado=="activo"
-                                            %}selected{% endif %}>
-                                            Activo
-                                        </option>
-
-                                        <option value="finalizado" {% if campeonato and campeonato.estado=="finalizado"
-                                            %}selected{% endif %}>
-                                            Finalizado
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <div class="d-flex justify-content-between">
-                                    <a href="/campeonatos" class="btn btn-outline-secondary">
-                                        Cancelar
-                                    </a>
-
-                                    <button type="submit" class="btn btn-primary">
-                                        Guardar campeonato
-                                    </button>
-                                </div>
-
-                            </form>
-
-                    </div>
-                </div>
+                    </form>
 
             </div>
         </div>
 
-    </main>
+    </div>
+</div>
 
-</body>
-
-</html>
+{% endblock %}

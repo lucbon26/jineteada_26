@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ campeonato.nombre }}
+{% endblock %}
+
+{% block page_title %}
+Campeonato
+{% endblock %}
+
+{% block contenido %}
+
+<nav class="mb-3">
+    <a href="/">Inicio</a>
+    /
+    <a href="/campeonatos">Campeonatos</a>
+    /
+    <strong>{{ campeonato.nombre }}</strong>
+</nav>
+
+<div class="card shadow-sm">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-start">
+
+            <div>
+
+                <h2 class="fw-bold">
+                    {{ campeonato.nombre }}
+                </h2>
+
+                {% if campeonato.descripcion %}
+                <p class="text-muted">
+                    {{ campeonato.descripcion }}
+                </p>
+                {% endif %}
+
+            </div>
+
+            <a href="/campeonatos/{{ campeonato.id }}/editar" class="btn btn-outline-primary">
+                Editar
+            </a>
+
+        </div>
+
+        <hr>
+
+        <div class="row">
+
+            <div class="col-md-4">
+                <strong>Estado</strong><br>
+                {{ campeonato.estado }}
+            </div>
+
+            <div class="col-md-4">
+                <strong>Inicio</strong><br>
+
+                {% if campeonato.fecha_inicio %}
+                {{ campeonato.fecha_inicio.strftime("%d/%m/%Y") }}
+                {% else %}
+                —
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <strong>Fin</strong><br>
+
+                {% if campeonato.fecha_fin %}
+                {{ campeonato.fecha_fin.strftime("%d/%m/%Y") }}
+                {% else %}
+                —
+                {% endif %}
+            </div>
+
+        </div>
+
+        <hr class="my-4">
+
+        <div class="card border">
+
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+
+                <h4 class="mb-0">
+                    📅 Fechas
+                </h4>
+
+                <a href="/fechas/nueva/{{ campeonato.id }}" class="btn btn-primary">
+                    + Nueva fecha
+                </a>
+
+            </div>
+
+            <div class="card-body p-0">
+
+                {% if fechas %}
+
+                <div class="list-group list-group-flush">
+
+                    {% for fecha_evento in fechas %}
+
+                    <a href="/fechas/{{ fecha_evento.id }}" class="list-group-item list-group-item-action py-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <strong>
+                                    {{ fecha_evento.nombre }}
+                                </strong>
+
+                                <div class="small text-muted">
+                                    {{ fecha_evento.fecha.strftime("%d/%m/%Y") }}
+                                    ·
+                                    {{ fecha_evento.localidad }}
+
+                                    {% if fecha_evento.lugar %}
+                                    · {{ fecha_evento.lugar }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="badge text-bg-secondary">
+                                    {{ fecha_evento.estado.replace("_", " ").title() }}
+                                </span>
+
+                                <span class="ms-3">
+                                    Abrir →
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </a>
+
+                    {% endfor %}
+
+                </div>
+
+                {% else %}
+
+                <div class="text-center py-5">
+                    <h5>No hay fechas registradas</h5>
+
+                    <p class="text-muted">
+                        Creá la primera fecha de este campeonato.
+                    </p>
+
+                    <a href="/fechas/nueva/{{ campeonato.id }}" class="btn btn-primary">
+                        Crear primera fecha
+                    </a>
+                </div>
+
+                {% endif %}
+
+            </div>
+        </div>
+
+        {% endblock %}

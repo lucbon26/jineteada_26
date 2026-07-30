@@ -5,7 +5,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
+from app.models.fecha import Fecha
 from app.core.database import get_db
 from app.models.campeonato import Campeonato
 
@@ -21,6 +23,7 @@ ESTADOS_VALIDOS = {
     "borrador",
     "activo",
     "finalizado",
+    
 }
 
 
@@ -62,13 +65,23 @@ def listar_campeonatos(
     )
 
     campeonatos = db.scalars(consulta).all()
+    
+    
 
     return templates.TemplateResponse(
         request=request,
         name="campeonatos/listado.html",
         context={
             "campeonatos": campeonatos,
+  
+            "menu_activo": "campeonatos",
+        "usuario_nombre": request.session.get(
+            "usuario_nombre",
+            "Administrador",
+            
+        ),
         },
+        
     )
 
 
@@ -303,4 +316,44 @@ def eliminar_campeonato(
     return RedirectResponse(
         "/campeonatos",
         status_code=303,
+    )
+    
+    
+@router.get("/{campeonato_id}", response_class=HTMLResponse)
+def detalle_campeonato(
+    campeonato_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    campeonato = (
+        db.query(Campeonato)
+        .filter(Campeonato.id == campeonato_id)
+        .first()
+    )
+
+    if campeonato is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Campeonato no encontrado",
+        )
+
+    fechas = (
+        db.query(Fecha)
+        .filter(Fecha.campeonato_id == campeonato_id)
+        .order_by(Fecha.fecha.asc())
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="campeonatos/detalle.html",
+        context={
+            "campeonato": campeonato,
+            "fechas": fechas,
+            "menu_activo": "campeonatos",
+            "usuario_nombre": request.session.get(
+                "usuario_nombre",
+                "Administrador",
+            ),
+        },
     )
