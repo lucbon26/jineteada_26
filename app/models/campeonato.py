@@ -59,4 +59,11 @@ class Campeonato(Base):
     back_populates="campeonato",
     cascade="all, delete-orphan",
     order_by="Fecha.fecha",
-)
+    )
+    
+    categorias = relationship(
+    "Categoria",
+    back_populates="campeonato",
+    cascade="all, delete-orphan",
+    order_by="Categoria.orden",
+    )

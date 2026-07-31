@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ accion }} categoría
+{% endblock %}
+
+{% block page_title %}
+Configuración de categoría
+{% endblock %}
+
+{% block contenido %}
+
+<nav class="mb-3">
+    <a href="/">Inicio</a>
+    /
+    <a href="/campeonatos">Campeonatos</a>
+    /
+    <a href="/campeonatos/{{ campeonato.id }}">
+        {{ campeonato.nombre }}
+    </a>
+    /
+    <strong>{{ accion }} categoría</strong>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <h2 class="fw-bold mb-1">
+                    {{ accion }} categoría
+                </h2>
+
+                <p class="text-muted mb-4">
+                    Esta configuración se utilizará en todas las fechas del campeonato.
+                </p>
+
+                {% if categoria %}
+                <form method="post" action="/categorias/{{ categoria.id }}/editar">
+                    {% else %}
+                    <form method="post" action="/categorias/nueva/{{ campeonato.id }}">
+                        {% endif %}
+
+                        <h5 class="mb-3">Información general</h5>
+
+                        <div class="row">
+
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Nombre</label>
+
+                                <input type="text" name="nombre" class="form-control" maxlength="100" required autofocus
+                                    placeholder="Ejemplo: Bastos" value="{{ categoria.nombre if categoria else '' }}">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Orden</label>
+
+                                <input type="number" name="orden" class="form-control" min="1" required
+                                    value="{{ categoria.orden if categoria else 10 }}">
+                            </div>
+
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+
+                            <textarea name="descripcion" class="form-control"
+                                rows="2">{{ categoria.descripcion if categoria and categoria.descripcion else '' }}</textarea>
+                        </div>
+
+                        <div class="row mb-3">
+
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="checkbox" name="activa" class="form-check-input" id="activa" {% if not
+                                        categoria or categoria.activa %}checked{% endif %}>
+
+                                    <label class="form-check-label" for="activa">
+                                        Categoría activa
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="checkbox" name="puntua_campeonato" class="form-check-input"
+                                        id="puntua_campeonato" {% if not categoria or categoria.puntua_campeonato
+                                        %}checked{% endif %}>
+
+                                    <label class="form-check-label" for="puntua_campeonato">
+                                        Puntúa para el campeonato
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5 class="mb-3">Reglas de participación</h5>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Tipo de monta
+                                </label>
+
+                                <input type="text" name="tipo_monta" class="form-control"
+                                    placeholder="Ejemplo: Bastos con encimera"
+                                    value="{{ categoria.tipo_monta if categoria and categoria.tipo_monta else '' }}">
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Cantidad de montas
+                                </label>
+
+                                <input type="number" name="cantidad_montas" class="form-control" min="1" required
+                                    value="{{ categoria.cantidad_montas if categoria else 1 }}">
+                            </div>
+
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Edad mínima</label>
+
+                                <input type="number" name="edad_minima" class="form-control" min="0"
+                                    value="{{ categoria.edad_minima if categoria and categoria.edad_minima is not none else '' }}">
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Edad máxima</label>
+
+                                <input type="number" name="edad_maxima" class="form-control" min="0"
+                                    value="{{ categoria.edad_maxima if categoria and categoria.edad_maxima is not none else '' }}">
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    Peso mínimo (kg)
+                                </label>
+
+                                <input type="number" name="peso_minimo" class="form-control" min="0" step="0.01"
+                                    value="{{ categoria.peso_minimo if categoria and categoria.peso_minimo is not none else '' }}">
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    Peso máximo (kg)
+                                </label>
+
+                                <input type="number" name="peso_maximo" class="form-control" min="0" step="0.01"
+                                    value="{{ categoria.peso_maximo if categoria and categoria.peso_maximo is not none else '' }}">
+                            </div>
+
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">
+                                Reglamento y observaciones
+                            </label>
+
+                            <textarea name="reglamento" class="form-control" rows="4"
+                                placeholder="Condiciones particulares de esta categoría">{{ categoria.reglamento if categoria and categoria.reglamento else '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+
+                            <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar categoría
+                            </button>
+
+                        </div>
+
+                    </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

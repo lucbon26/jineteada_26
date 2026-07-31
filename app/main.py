@@ -10,6 +10,7 @@ from app.core.logger import logger
 from app.routers import auth, campeonatos
 from app.services.bootstrap import crear_admin_inicial
 from app.routers import fechas
+from app.routers import categorias
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,7 +25,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(campeonatos.router)
 app.include_router(fechas.router)
-
+app.include_router(categorias.router)
 
 templates = Jinja2Templates(directory="app/templates")
 

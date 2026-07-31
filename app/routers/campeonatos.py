@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from app.models.fecha import Fecha
 from app.core.database import get_db
 from app.models.campeonato import Campeonato
+from app.models.categoria import Categoria
 
 
 router = APIRouter(
@@ -343,6 +344,18 @@ def detalle_campeonato(
         .order_by(Fecha.fecha.asc())
         .all()
     )
+    
+    categorias = (
+        db.query(Categoria)
+        .filter(
+            Categoria.campeonato_id == campeonato_id
+        )
+        .order_by(
+            Categoria.orden.asc(),
+            Categoria.nombre.asc(),
+        )
+        .all()
+        )
 
     return templates.TemplateResponse(
         request=request,
@@ -350,6 +363,7 @@ def detalle_campeonato(
         context={
             "campeonato": campeonato,
             "fechas": fechas,
+            "categorias": categorias,
             "menu_activo": "campeonatos",
             "usuario_nombre": request.session.get(
                 "usuario_nombre",
@@ -357,3 +371,5 @@ def detalle_campeonato(
             ),
         },
     )
+    
+    

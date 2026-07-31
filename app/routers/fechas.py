@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.campeonato import Campeonato
 from app.models.fecha import Fecha
-
+from app.models.categoria import Categoria
 
 router = APIRouter(
     prefix="/fechas",
@@ -44,6 +45,21 @@ def detalle_fecha(
     db: Session = Depends(get_db),
 ):
     fecha_evento = obtener_fecha_o_404(fecha_id, db)
+    
+    consulta = (
+    select(Categoria)
+    .where(
+        Categoria.campeonato_id
+        == fecha_evento.campeonato_id
+    )
+    .order_by(
+        Categoria.orden.asc(),
+        Categoria.nombre.asc(),
+    )
+    )
+
+    categorias = db.scalars(consulta).all()
+
 
     return templates.TemplateResponse(
         request=request,
@@ -51,6 +67,7 @@ def detalle_fecha(
         context={
             "fecha_evento": fecha_evento,
             "campeonato": fecha_evento.campeonato,
+            "categorias": categorias,
             "menu_activo": "campeonatos",
             "usuario_nombre": request.session.get(
                 "usuario_nombre",

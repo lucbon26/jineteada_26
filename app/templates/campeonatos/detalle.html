@@ -75,6 +75,126 @@ Campeonato
 
         </div>
 
+        <div class="card border mb-4">
+
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+
+                <h4 class="mb-0">
+                    🏷️ Categorías del campeonato
+                </h4>
+
+                <a href="/categorias/nueva/{{ campeonato.id }}" class="btn btn-primary">
+                    + Nueva categoría
+                </a>
+
+            </div>
+
+            <div class="card-body p-0">
+
+                {% if categorias %}
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Orden</th>
+                                <th>Categoría</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for categoria in categorias %}
+
+                            <tr>
+                                <td class="ps-4">
+                                    {{ categoria.orden }}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        {{ categoria.nombre }}
+                                    </strong>
+
+                                    {% if categoria.descripcion %}
+                                    <div class="small text-muted">
+                                        {{ categoria.descripcion }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        {{ categoria.tipo_monta or "Tipo de monta sin definir" }}
+                                        · {{ categoria.cantidad_montas }} monta{% if categoria.cantidad_montas != 1
+                                        %}s{% endif %}
+
+                                        {% if categoria.puntua_campeonato %}
+                                        · Puntúa
+                                        {% else %}
+                                        · No puntúa
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if categoria.activa %}
+                                    <span class="badge text-bg-success">
+                                        Activa
+                                    </span>
+                                    {% else %}
+                                    <span class="badge text-bg-secondary">
+                                        Inactiva
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-end pe-4">
+
+                                    <a href="/categorias/{{ categoria.id }}/editar"
+                                        class="btn btn-outline-primary btn-sm">
+                                        Editar
+                                    </a>
+
+                                    <form method="post" action="/categorias/{{ categoria.id }}/eliminar"
+                                        class="d-inline"
+                                        onsubmit="return confirm('¿Eliminar esta categoría del campeonato?');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            Eliminar
+                                        </button>
+                                    </form>
+
+                                </td>
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+                </div>
+
+                {% else %}
+
+                <div class="text-center py-5">
+
+                    <h5>No hay categorías configuradas</h5>
+
+                    <p class="text-muted">
+                        Estas categorías serán utilizadas por todas las fechas.
+                    </p>
+
+                    <a href="/categorias/nueva/{{ campeonato.id }}" class="btn btn-primary">
+                        Crear primera categoría
+                    </a>
+
+                </div>
+
+                {% endif %}
+
+            </div>
+        </div>
+
         <hr class="my-4">
 
         <div class="card border">
