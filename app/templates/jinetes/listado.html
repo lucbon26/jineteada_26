@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Jinetes{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Jinetes</h1>
+            <p class="text-muted mb-0">
+                Padrón general de jinetes registrados.
+            </p>
+        </div>
+
+        <a href="/jinetes/nuevo" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i>
+            Nuevo jinete
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="/jinetes">
+                <div class="row g-3">
+
+                    <div class="col-md-8">
+                        <label for="buscar" class="form-label">
+                            Buscar
+                        </label>
+
+                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}"
+                            placeholder="Nombre, apellido, DNI o localidad">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="estado" class="form-label">
+                            Estado
+                        </label>
+
+                        <select class="form-select" id="estado" name="estado">
+                            <option value="todos" {% if estado=="todos" %}selected{% endif %}>
+                                Todos
+                            </option>
+
+                            <option value="activos" {% if estado=="activos" %}selected{% endif %}>
+                                Activos
+                            </option>
+
+                            <option value="inactivos" {% if estado=="inactivos" %}selected{% endif %}>
+                                Inactivos
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            Buscar
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th>Apellido y nombre</th>
+                            <th>DNI</th>
+                            <th>Localidad</th>
+                            <th>Celular</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for jinete in jinetes %}
+                        <tr>
+                            <td>
+                                <strong>
+                                    {{ jinete.apellidos }},
+                                    {{ jinete.nombres }}
+                                </strong>
+                            </td>
+
+                            <td>{{ jinete.dni }}</td>
+
+                            <td>
+                                {{ jinete.localidad or "-" }}
+                            </td>
+
+                            <td>
+                                {{ jinete.celular or "-" }}
+                            </td>
+
+                            <td>
+                                {% if jinete.activo %}
+                                <span class="badge text-bg-success">
+                                    Activo
+                                </span>
+                                {% else %}
+                                <span class="badge text-bg-secondary">
+                                    Inactivo
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                <a href="/jinetes/{{ jinete.id }}" class="btn btn-sm btn-outline-secondary">
+                                    Ver
+                                </a>
+
+                                <a href="/jinetes/{{ jinete.id }}/editar" class="btn btn-sm btn-outline-primary">
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                No hay jinetes registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
