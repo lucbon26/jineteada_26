@@ -1,32 +1,71 @@
 # 🐎 Sistema de Gestión de Jineteadas
 
-Sistema desarrollado en **Python + FastAPI** para administrar campeonatos de jineteadas.
+Sistema web desarrollado en **Python + FastAPI** para la administración integral de campeonatos de jineteadas.
 
-El objetivo es brindar una herramienta moderna, rápida y transparente para la gestión integral de competencias, desde la preinscripción hasta la clasificación final.
+El objetivo es brindar una herramienta moderna, rápida y transparente para gestionar todo el ciclo de una competencia, desde la organización del campeonato hasta los resultados finales.
 
 ---
 
-## ✨ Características
+# 🚀 Estado del proyecto
 
+> **Versión actual:** Desarrollo (rama `develop`)
+
+### Módulos completados
+
+- ✅ Autenticación
+- ✅ Dashboard
+- ✅ Campeonatos
+- ✅ Fechas
+- ✅ Categorías
+- ✅ Jinetes
+
+### Próximos módulos
+
+- 🐎 Caballos
+- 🤠 Tropillas
+- 📝 Inscripciones
+- 🎲 Sorteo
+- 🏆 Resultados
+- 📄 Reportes PDF
+- 📊 Estadísticas
+- 📝 Auditoría
+
+---
+
+# ✨ Funcionalidades
+
+## Actualmente disponibles
+
+- 🔐 Autenticación de usuarios
+- 📋 Dashboard administrativo
 - 🏆 Gestión de campeonatos
 - 📅 Administración de fechas
-- 👤 Gestión de jinetes
-- 🐎 Gestión de caballos y tropillas
+- 🏁 Categorías compartidas por campeonato
+- ⚙ Configuración avanzada de categorías
+- 👤 Padrón de jinetes
+- 🔍 Búsqueda de jinetes
+- 👥 Usuarios con autenticación
+
+## Próximamente
+
+- 🐎 Gestión de caballos
+- 🤠 Gestión de tropillas
 - 📥 Importación masiva desde Excel
 - 📱 Confirmación mediante QR
-- 🎲 Sorteo aleatorio de jinetes y caballos
-- 📄 Generación de PDF para jueces
-- 📊 Resultados y clasificación
-- 📝 Auditoría completa de acciones (Logs)
-- 👥 Usuarios con distintos permisos
+- 🎲 Sorteo transparente
+- 📄 Generación automática de PDF
+- 🏆 Clasificaciones
+- 📊 Estadísticas
+- 📝 Auditoría completa
 
 ---
 
-## 🛠 Stack tecnológico
+# 🛠 Stack tecnológico
 
-- Python 3.14+
+- Python 3.14
 - FastAPI
-- SQLAlchemy
+- SQLAlchemy 2
+- Alembic
 - SQLite (desarrollo)
 - PostgreSQL (producción)
 - Jinja2
@@ -34,9 +73,32 @@ El objetivo es brindar una herramienta moderna, rápida y transparente para la g
 
 ---
 
-## 📂 Estructura del proyecto
+# 📂 Arquitectura actual
 
 ```
+Campeonato
+│
+├── Categorías
+│
+├── Fechas
+│
+└── (próximamente)
+      ├── Caballos
+      ├── Tropillas
+      ├── Inscripciones
+      ├── Sorteo
+      └── Resultados
+```
+
+Las **categorías pertenecen al campeonato** y son compartidas por todas sus fechas.
+
+Los **jinetes** forman un padrón único reutilizable entre campeonatos.
+
+---
+
+# 📂 Estructura del proyecto
+
+```text
 jineteada_26
 │
 ├── app/
@@ -47,6 +109,7 @@ jineteada_26
 │   ├── templates/
 │   └── static/
 │
+├── alembic/
 ├── backups/
 ├── data/
 ├── docs/
@@ -59,32 +122,44 @@ jineteada_26
 
 ---
 
-## 🚧 Estado del proyecto
+# 🗺 Roadmap
 
-Actualmente en desarrollo.
-
-### Roadmap
-
-- [x] Arquitectura del proyecto
-- [ ] Base de datos
-- [ ] Login
-- [ ] Dashboard
-- [ ] Campeonatos
-- [ ] Fechas
-- [ ] Categorías
-- [ ] Jinetes
+- [x] Arquitectura
+- [x] Base de datos
+- [x] Login
+- [x] Dashboard
+- [x] Campeonatos
+- [x] Fechas
+- [x] Categorías
+- [x] Jinetes
 - [ ] Caballos
-- [ ] Preinscripciones
+- [ ] Tropillas
+- [ ] Inscripciones
 - [ ] QR
 - [ ] Sorteo
 - [ ] Resultados
-- [ ] Reportes
+- [ ] Reportes PDF
+- [ ] Estadísticas
 - [ ] Auditoría
 
 ---
 
-## 👨‍💻 Autor
+## 📌 Últimos avances
+
+### Julio 2026
+
+- ✅ Módulo 4 finalizado (Categorías).
+- ✅ Categorías compartidas por campeonato.
+- ✅ Configuración avanzada de categorías.
+- ✅ Inicio y base del Módulo 5 (Jinetes).
+- ✅ Creación del padrón único de jinetes.
+- ✅ Listado de jinetes con búsqueda y filtros.
+- ✅ Integración de Jinetes al Dashboard y menú lateral.
+
+---
+
+# 👨‍💻 Autor
 
 **Lucas Bonfil**
 
-Proyecto desarrollado para la gestión profesional de campeonatos de jineteadas.
+Sistema desarrollado para la administración profesional de campeonatos de jineteadas, priorizando la transparencia de los sorteos, la reutilización de datos y la facilidad de uso para organizadores, secretaría y locución.
