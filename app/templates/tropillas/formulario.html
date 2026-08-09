@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">
+            {% if tropilla %}
+            Editar tropilla
+            {% else %}
+            Nueva tropilla
+            {% endif %}
+        </h1>
+
+        <p class="text-muted mb-0">
+            Datos generales de la tropilla.
+        </p>
+    </div>
+
+    <form method="post"
+        action="{% if tropilla %}/tropillas/{{ tropilla.id }}/editar{% else %}/tropillas/nueva{% endif %}">
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Información general</strong>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+
+                        <label for="nombre" class="form-label">
+                            Nombre *
+                        </label>
+
+                        <input type="text" class="form-control" id="nombre" name="nombre"
+                            value="{{ tropilla.nombre if tropilla else '' }}" maxlength="150" required>
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label for="propietario" class="form-label">
+                            Propietario / Responsable
+                        </label>
+
+                        <input type="text" class="form-control" id="propietario" name="propietario"
+                            value="{{ tropilla.propietario if tropilla and tropilla.propietario else '' }}"
+                            maxlength="150">
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label for="provincia" class="form-label">
+                            Provincia
+                        </label>
+
+                        <input type="text" class="form-control" id="provincia" name="provincia"
+                            value="{{ tropilla.provincia if tropilla and tropilla.provincia else '' }}" maxlength="100">
+
+                    </div>
+
+                    <div class="col-md-6">
+
+                        <label for="localidad" class="form-label">
+                            Localidad
+                        </label>
+
+                        <input type="text" class="form-control" id="localidad" name="localidad"
+                            value="{{ tropilla.localidad if tropilla and tropilla.localidad else '' }}" maxlength="100">
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Información adicional</strong>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row g-3">
+
+                    <div class="col-12">
+
+                        <label for="observaciones" class="form-label">
+                            Observaciones
+                        </label>
+
+                        <textarea class="form-control" id="observaciones" name="observaciones"
+                            rows="4">{{ tropilla.observaciones if tropilla and tropilla.observaciones else '' }}</textarea>
+
+                    </div>
+
+                    <div class="col-12">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input" type="checkbox" id="activo" name="activo" {% if not tropilla
+                                or tropilla.activo %}checked{% endif %}>
+
+                            <label class="form-check-label" for="activo">
+                                Tropilla activa
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="d-flex justify-content-end gap-2">
+
+            <a href="/tropillas" class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar tropilla
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -132,8 +132,8 @@ jineteada_26
 - [x] Fechas
 - [x] Categorías
 - [x] Jinetes
-- [ ] Caballos
-- [ ] Tropillas
+- [ ] Caballos 🚧 En desarrollo
+- [ ] Tropillas 🚧 En desarrollo
 - [ ] Inscripciones
 - [ ] QR
 - [ ] Sorteo
@@ -148,26 +148,25 @@ jineteada_26
 
 ### Agosto 2026
 
-### ✅ Módulo 5 — Jinetes
+### 🚧 Módulo 6 — Caballos y Tropillas
 
-Gestión general del padrón de jinetes.
+En desarrollo.
 
-Implementado:
+Implementado hasta el momento:
 
-- Alta de jinetes.
-- Listado general.
-- Búsqueda por nombre, apellido, DNI o localidad.
-- Filtro por estado.
-- Ficha individual del jinete.
-- Edición de datos personales y de contacto.
-- Validación de DNI único.
-- Estados:
-  - Activo.
-  - Inactivo.
-  - Suspendido.
-  - Descalificado.
-- Integración con el menú principal y navegación del sistema.
----
+- [x] Padrón de tropillas.
+- [x] Alta y edición de tropillas.
+- [x] Padrón de caballos.
+- [x] Alta y edición de caballos.
+- [x] Asociación de caballos con tropillas.
+- [x] Estados de caballos.
+- [x] Asociación Caballo → Fecha → Categoría.
+- [x] Selección de caballos disponibles por categoría.
+- [x] Exclusividad de categoría por fecha:
+      un caballo no puede participar en más de una categoría en la misma fecha.
+- [ ] Resumen de caballos asignados por categoría.
+- [ ] Carga/importación masiva desde Excel.
+- [ ] Validaciones finales del módulo.
 
 # 👨‍💻 Autor
 

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">
+            {% if caballo %}
+            Editar caballo
+            {% else %}
+            Nuevo caballo
+            {% endif %}
+        </h1>
+
+        <p class="text-muted mb-0">
+            Datos generales del caballo.
+        </p>
+    </div>
+
+    <form method="post" action="{% if caballo %}/caballos/{{ caballo.id }}/editar{% else %}/caballos/nuevo{% endif %}">
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Información general</strong>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="nombre" class="form-label">
+                            Nombre *
+                        </label>
+
+                        <input type="text" class="form-control" id="nombre" name="nombre"
+                            value="{{ caballo.nombre if caballo else '' }}" maxlength="150" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="tropilla_id" class="form-label">
+                            Tropilla
+                        </label>
+
+                        <select class="form-select" id="tropilla_id" name="tropilla_id">
+                            <option value="">
+                                Sin tropilla
+                            </option>
+
+                            {% for tropilla in tropillas %}
+
+                            <option value="{{ tropilla.id }}" {% if caballo and caballo.tropilla_id==tropilla.id
+                                %}selected{% endif %}>
+                                {{ tropilla.nombre }}
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="pelaje" class="form-label">
+                            Pelaje
+                        </label>
+
+                        <input type="text" class="form-control" id="pelaje" name="pelaje"
+                            value="{{ caballo.pelaje if caballo and caballo.pelaje else '' }}" maxlength="100">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="estado" class="form-label">
+                            Estado
+                        </label>
+
+                        <select class="form-select" id="estado" name="estado">
+
+                            <option value="activo" {% if not caballo or caballo.estado=="activo" %}selected{% endif %}>
+                                Activo
+                            </option>
+
+                            <option value="inactivo" {% if caballo and caballo.estado=="inactivo" %}selected{% endif %}>
+                                Inactivo
+                            </option>
+
+                            <option value="lesionado" {% if caballo and caballo.estado=="lesionado" %}selected{% endif
+                                %}>
+                                Lesionado
+                            </option>
+
+                            <option value="retirado" {% if caballo and caballo.estado=="retirado" %}selected{% endif %}>
+                                Retirado
+                            </option>
+
+                        </select>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Información adicional</strong>
+            </div>
+
+            <div class="card-body">
+
+                <label for="observaciones" class="form-label">
+                    Observaciones
+                </label>
+
+                <textarea class="form-control" id="observaciones" name="observaciones"
+                    rows="4">{{ caballo.observaciones if caballo and caballo.observaciones else '' }}</textarea>
+
+            </div>
+
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+
+            <a href="/caballos" class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar caballo
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

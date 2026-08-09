@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="h3 mb-1">
+                Tropillas
+            </h1>
+
+            <p class="text-muted mb-0">
+                Padrón general de tropillas registradas.
+            </p>
+        </div>
+
+        <a href="/tropillas/nueva" class="btn btn-primary">
+            Nueva tropilla
+        </a>
+
+    </div>
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="get" action="/tropillas">
+
+                <div class="row g-3">
+
+                    <div class="col-md-8">
+
+                        <label for="buscar" class="form-label">
+                            Buscar
+                        </label>
+
+                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}"
+                            placeholder="Nombre, propietario o localidad">
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <label for="estado" class="form-label">
+                            Estado
+                        </label>
+
+                        <select class="form-select" id="estado" name="estado">
+
+                            <option value="todos" {% if estado=="todos" %}selected{% endif %}>
+                                Todos
+                            </option>
+
+                            <option value="activas" {% if estado=="activas" %}selected{% endif %}>
+                                Activas
+                            </option>
+
+                            <option value="inactivas" {% if estado=="inactivas" %}selected{% endif %}>
+                                Inactivas
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            Buscar
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Propietario</th>
+                            <th>Localidad</th>
+                            <th>Provincia</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for tropilla in tropillas %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ tropilla.nombre }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ tropilla.propietario or "-" }}
+                            </td>
+
+                            <td>
+                                {{ tropilla.localidad or "-" }}
+                            </td>
+
+                            <td>
+                                {{ tropilla.provincia or "-" }}
+                            </td>
+
+                            <td>
+
+                                {% if tropilla.activo %}
+
+                                <span class="badge text-bg-success">
+                                    Activa
+                                </span>
+
+                                {% else %}
+
+                                <span class="badge text-bg-secondary">
+                                    Inactiva
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td class="text-end">
+
+                                <a href="/tropillas/{{ tropilla.id }}/editar" class="btn btn-sm btn-outline-primary">
+                                    Editar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+
+                            <td colspan="6" class="text-center text-muted py-5">
+                                No hay tropillas registradas.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

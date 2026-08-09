@@ -63,269 +63,119 @@ Fecha del campeonato
 
         <div class="row g-4">
 
-            <div class="col-md-3">
-                <div class="text-muted small">Estado</div>
+            <div class="row g-4">
 
-                {% if fecha_evento.estado == "programada" %}
-                <span class="badge text-bg-secondary">
-                    Programada
-                </span>
-                {% elif fecha_evento.estado == "en_curso" %}
-                <span class="badge text-bg-primary">
-                    En curso
-                </span>
-                {% elif fecha_evento.estado == "finalizada" %}
-                <span class="badge text-bg-success">
-                    Finalizada
-                </span>
-                {% elif fecha_evento.estado == "suspendida" %}
-                <span class="badge text-bg-danger">
-                    Suspendida
-                </span>
-                {% else %}
-                <span class="badge text-bg-secondary">
-                    {{ fecha_evento.estado }}
-                </span>
-                {% endif %}
-            </div>
+                <div class="row g-4">
 
-            <div class="col-md-3">
-                <div class="text-muted small">Lugar</div>
-                <strong>{{ fecha_evento.lugar or "Sin definir" }}</strong>
-            </div>
+                    <div class="col-12">
+                        <div class="card shadow-sm">
 
-            <div class="col-md-3">
-                <div class="text-muted small">Organizador</div>
-                <strong>{{ fecha_evento.organizador or "Sin definir" }}</strong>
-            </div>
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
 
-            <div class="col-md-3">
-                <div class="text-muted small">Campeonato</div>
-
-                <a href="/campeonatos/{{ campeonato.id }}" class="text-decoration-none fw-bold">
-                    {{ campeonato.nombre }}
-                </a>
-            </div>
-
-        </div>
-
-        {% if fecha_evento.observaciones %}
-        <hr>
-
-        <div class="text-muted small">
-            Observaciones
-        </div>
-
-        <p class="mb-0">
-            {{ fecha_evento.observaciones }}
-        </p>
-        {% endif %}
-
-    </div>
-</div>
-
-<div class="row g-4">
-
-    <div class="col-md-6 col-xl-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <<div class="col-12">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-
-                            <div>
                                 <h4 class="mb-0">
                                     🏷️ Categorías
                                 </h4>
-                            </div>
 
-                            <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-primary">
-                                Administrar categorías
-                            </a>
-                        </div>
-
-                        <div class="card-body p-0">
-
-                            {% if categorias %}
-
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="ps-4">Orden</th>
-                                            <th>Categoría</th>
-                                            <th>Estado</th>
-                                            <th class="text-end pe-4">Acciones</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-
-                                        {% for categoria in categorias %}
-
-                                        <tr>
-                                            <td class="ps-4">
-                                                {{ categoria.orden }}
-                                            </td>
-
-                                            <td>
-                                                <strong>
-                                                    {{ categoria.nombre }}
-                                                </strong>
-
-                                                {% if categoria.descripcion %}
-                                                <div class="small text-muted">
-                                                    {{ categoria.descripcion }}
-                                                </div>
-                                                {% endif %}
-                                            </td>
-
-                                            <td>
-                                                {% if categoria.activa %}
-                                                <span class="badge text-bg-success">
-                                                    Activa
-                                                </span>
-                                                {% else %}
-                                                <span class="badge text-bg-secondary">
-                                                    Inactiva
-                                                </span>
-                                                {% endif %}
-                                            </td>
-
-                                            <td class="text-end pe-4">
-
-                                                <a href="/categorias/{{ categoria.id }}/editar"
-                                                    class="btn btn-outline-primary btn-sm">
-                                                    Editar
-                                                </a>
-
-                                                <form method="post" action="/categorias/{{ categoria.id }}/eliminar"
-                                                    class="d-inline"
-                                                    onsubmit="return confirm('¿Eliminar esta categoría?');">
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                        Eliminar
-                                                    </button>
-                                                </form>
-
-                                            </td>
-                                        </tr>
-
-                                        {% endfor %}
-
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {% else %}
-
-                            <div class="text-center py-5">
-
-                                <h5>No hay categorías cargadas</h5>
-
-                                <p class="text-muted">
-                                    Agregá Bastos, Gurupa, Clina u otra categoría.
-                                </p>
-
-                                <a href="/categorias/nueva/{{ fecha_evento.id }}" class="btn btn-primary">
-                                    Crear primera categoría
+                                <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-primary">
+                                    Administrar categorías
                                 </a>
 
                             </div>
 
-                            {% endif %}
+                            <div class="card-body p-0">
+
+                                {% if categorias %}
+
+                                <div class="table-responsive">
+
+                                    <table class="table table-hover align-middle mb-0">
+
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="ps-4">Orden</th>
+                                                <th>Categoría</th>
+                                                <th>Estado</th>
+                                                <th class="text-end pe-4">Caballos</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+
+                                            {% for categoria in categorias %}
+
+                                            <tr>
+
+                                                <td class="ps-4">
+                                                    {{ categoria.orden }}
+                                                </td>
+
+                                                <td>
+                                                    <strong>
+                                                        {{ categoria.nombre }}
+                                                    </strong>
+
+                                                    {% if categoria.descripcion %}
+                                                    <div class="small text-muted">
+                                                        {{ categoria.descripcion }}
+                                                    </div>
+                                                    {% endif %}
+                                                </td>
+
+                                                <td>
+                                                    {% if categoria.activa %}
+                                                    <span class="badge text-bg-success">
+                                                        Activa
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="badge text-bg-secondary">
+                                                        Inactiva
+                                                    </span>
+                                                    {% endif %}
+                                                </td>
+
+                                                <td class="text-end pe-4">
+
+                                                    <a href="/fechas/{{ fecha_evento.id }}/categorias/{{ categoria.id }}/caballos"
+                                                        class="btn btn-sm btn-outline-primary">
+                                                        Administrar caballos
+                                                    </a>
+
+                                                </td>
+
+                                            </tr>
+
+                                            {% endfor %}
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                                {% else %}
+
+                                <div class="text-center py-5">
+
+                                    <h5>No hay categorías cargadas</h5>
+
+                                    <p class="text-muted">
+                                        Administralas desde el campeonato.
+                                    </p>
+
+                                    <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-primary">
+                                        Administrar categorías
+                                    </a>
+
+                                </div>
+
+                                {% endif %}
+
+                            </div>
 
                         </div>
-
                     </div>
 
-            </div>
-        </div>
-    </div>
-</div>
+                </div>
 
-<div class="col-md-6 col-xl-4">
-    <div class="card shadow-sm h-100">
-        <div class="card-body">
-            <h4>👤 Inscripciones</h4>
 
-            <p class="text-muted">
-                Preinscripción y confirmación de jinetes.
-            </p>
-
-            <button class="btn btn-secondary" disabled>
-                Próximamente
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="col-md-6 col-xl-4">
-    <div class="card shadow-sm h-100">
-        <div class="card-body">
-            <h4>🐴 Caballos</h4>
-
-            <p class="text-muted">
-                Caballos y tropillas disponibles.
-            </p>
-
-            <button class="btn btn-secondary" disabled>
-                Próximamente
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="col-md-6 col-xl-4">
-    <div class="card shadow-sm h-100">
-        <div class="card-body">
-            <h4>🎲 Sorteo</h4>
-
-            <p class="text-muted">
-                Asignación transparente de jinetes y caballos.
-            </p>
-
-            <button class="btn btn-secondary" disabled>
-                Próximamente
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="col-md-6 col-xl-4">
-    <div class="card shadow-sm h-100">
-        <div class="card-body">
-            <h4>📊 Resultados</h4>
-
-            <p class="text-muted">
-                Puntajes y clasificación de la fecha.
-            </p>
-
-            <button class="btn btn-secondary" disabled>
-                Próximamente
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="col-md-6 col-xl-4">
-    <div class="card shadow-sm h-100">
-        <div class="card-body">
-            <h4>📄 Reportes</h4>
-
-            <p class="text-muted">
-                Orden de monta, palenques y resultados en PDF.
-            </p>
-
-            <button class="btn btn-secondary" disabled>
-                Próximamente
-            </button>
-        </div>
-    </div>
-</div>
-
-</div>
-
-{% endblock %}
+                {% endblock %}

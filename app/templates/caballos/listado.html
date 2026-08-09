@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="h3 mb-1">
+                Caballos
+            </h1>
+
+            <p class="text-muted mb-0">
+                Padrón general de caballos registrados.
+            </p>
+        </div>
+
+        <a href="/caballos/nuevo" class="btn btn-primary">
+            Nuevo caballo
+        </a>
+
+    </div>
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="get" action="/caballos">
+
+                <div class="row g-3">
+
+                    <div class="col-md-8">
+
+                        <label for="buscar" class="form-label">
+                            Buscar
+                        </label>
+
+                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}"
+                            placeholder="Nombre, pelaje o tropilla">
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <label for="estado" class="form-label">
+                            Estado
+                        </label>
+
+                        <select class="form-select" id="estado" name="estado">
+
+                            <option value="todos" {% if estado=="todos" %}selected{% endif %}>
+                                Todos
+                            </option>
+
+                            <option value="activo" {% if estado=="activo" %}selected{% endif %}>
+                                Activos
+                            </option>
+
+                            <option value="inactivo" {% if estado=="inactivo" %}selected{% endif %}>
+                                Inactivos
+                            </option>
+
+                            <option value="lesionado" {% if estado=="lesionado" %}selected{% endif %}>
+                                Lesionados
+                            </option>
+
+                            <option value="retirado" {% if estado=="retirado" %}selected{% endif %}>
+                                Retirados
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            Buscar
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tropilla</th>
+                            <th>Pelaje</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for caballo in caballos %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ caballo.nombre }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {% if caballo.tropilla %}
+                                {{ caballo.tropilla.nombre }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ caballo.pelaje or "-" }}
+                            </td>
+
+                            <td>
+
+                                {% if caballo.estado == "activo" %}
+
+                                <span class="badge text-bg-success">
+                                    Activo
+                                </span>
+
+                                {% elif caballo.estado == "inactivo" %}
+
+                                <span class="badge text-bg-secondary">
+                                    Inactivo
+                                </span>
+
+                                {% elif caballo.estado == "lesionado" %}
+
+                                <span class="badge text-bg-warning">
+                                    Lesionado
+                                </span>
+
+                                {% elif caballo.estado == "retirado" %}
+
+                                <span class="badge text-bg-danger">
+                                    Retirado
+                                </span>
+
+                                {% else %}
+
+                                <span class="badge text-bg-secondary">
+                                    {{ caballo.estado }}
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td class="text-end">
+
+                                <a href="/caballos/{{ caballo.id }}/editar" class="btn btn-sm btn-outline-primary">
+                                    Editar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+
+                            <td colspan="5" class="text-center text-muted py-5">
+                                No hay caballos registrados.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
