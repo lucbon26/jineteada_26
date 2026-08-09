@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">
+            {% if jinete %}
+            Editar jinete
+            {% else %}
+            Nuevo jinete
+            {% endif %}
+        </h1>
+
+        <p class="text-muted mb-0">
+            Datos personales y de contacto del jinete.
+        </p>
+    </div>
+
+    <form method="post" action="{% if jinete %}/jinetes/{{ jinete.id }}/editar{% else %}/jinetes/nuevo{% endif %}">
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Datos personales</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="nombres" class="form-label">
+                            Nombres *
+                        </label>
+
+                        <input type="text" class="form-control" id="nombres" name="nombres"
+                            value="{{ jinete.nombres if jinete else '' }}" required maxlength="100">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="apellidos" class="form-label">
+                            Apellidos *
+                        </label>
+
+                        <input type="text" class="form-control" id="apellidos" name="apellidos"
+                            value="{{ jinete.apellidos if jinete else '' }}" required maxlength="100">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="dni" class="form-label">
+                            DNI *
+                        </label>
+
+                        <input type="text" class="form-control" id="dni" name="dni"
+                            value="{{ jinete.dni if jinete else '' }}" required maxlength="20">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="fecha_nacimiento" class="form-label">
+                            Fecha de nacimiento
+                        </label>
+
+                        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento"
+                            value="{{ jinete.fecha_nacimiento.isoformat() if jinete and jinete.fecha_nacimiento else '' }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="sexo" class="form-label">
+                            Sexo
+                        </label>
+
+                        <select class="form-select" id="sexo" name="sexo">
+                            <option value="">Seleccionar</option>
+
+                            <option value="Masculino" {% if jinete and jinete.sexo=="Masculino" %}selected{% endif %}>
+                                Masculino
+                            </option>
+
+                            <option value="Femenino" {% if jinete and jinete.sexo=="Femenino" %}selected{% endif %}>
+                                Femenino
+                            </option>
+
+                            <option value="Otro" {% if jinete and jinete.sexo=="Otro" %}selected{% endif %}>
+                                Otro
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="nacionalidad" class="form-label">
+                            Nacionalidad
+                        </label>
+
+                        <input type="text" class="form-control" id="nacionalidad" name="nacionalidad"
+                            value="{{ jinete.nacionalidad if jinete and jinete.nacionalidad else '' }}" maxlength="60">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="club_agrupacion" class="form-label">
+                            Club o agrupación
+                        </label>
+
+                        <input type="text" class="form-control" id="club_agrupacion" name="club_agrupacion"
+                            value="{{ jinete.club_agrupacion if jinete and jinete.club_agrupacion else '' }}"
+                            maxlength="150">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Contacto y ubicación</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="celular" class="form-label">
+                            Celular
+                        </label>
+
+                        <input type="text" class="form-control" id="celular" name="celular"
+                            value="{{ jinete.celular if jinete and jinete.celular else '' }}" maxlength="30">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">
+                            Correo electrónico
+                        </label>
+
+                        <input type="email" class="form-control" id="email" name="email"
+                            value="{{ jinete.email if jinete and jinete.email else '' }}" maxlength="150">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="provincia" class="form-label">
+                            Provincia
+                        </label>
+
+                        <input type="text" class="form-control" id="provincia" name="provincia"
+                            value="{{ jinete.provincia if jinete and jinete.provincia else '' }}" maxlength="100">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="localidad" class="form-label">
+                            Localidad
+                        </label>
+
+                        <input type="text" class="form-control" id="localidad" name="localidad"
+                            value="{{ jinete.localidad if jinete and jinete.localidad else '' }}" maxlength="100">
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Información adicional</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="categoria_habitual" class="form-label">
+                            Categoría habitual
+                        </label>
+
+                        <input type="text" class="form-control" id="categoria_habitual" name="categoria_habitual"
+                            value="{{ jinete.categoria_habitual if jinete and jinete.categoria_habitual else '' }}"
+                            maxlength="100">
+                    </div>
+
+                    <div class="col-12">
+                        <label for="observaciones" class="form-label">
+                            Observaciones
+                        </label>
+
+                        <textarea class="form-control" id="observaciones" name="observaciones"
+                            rows="4">{{ jinete.observaciones if jinete and jinete.observaciones else '' }}</textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="estado" class="form-label">
+                            Estado
+                        </label>
+
+                        <select class="form-select" id="estado" name="estado">
+                            <option value="activo" {% if not jinete or jinete.estado=="activo" %}selected{% endif %}>
+                                Activo
+                            </option>
+
+                            <option value="inactivo" {% if jinete and jinete.estado=="inactivo" %}selected{% endif %}>
+                                Inactivo
+                            </option>
+
+                            <option value="suspendido" {% if jinete and jinete.estado=="suspendido" %}selected{% endif
+                                %}>
+                                Suspendido
+                            </option>
+
+                            <option value="descalificado" {% if jinete and jinete.estado=="descalificado" %}selected{%
+                                endif %}>
+                                Descalificado
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a href="/jinetes" class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar jinete
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

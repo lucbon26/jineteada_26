@@ -84,10 +84,10 @@ class Jinete(Base):
         nullable=True,
     )
 
-    activo: Mapped[bool] = mapped_column(
-        Boolean,
+    estado: Mapped[str] = mapped_column(
+        String(20),
         nullable=False,
-        default=True,
+        default="activo",
     )
 
     creado_en: Mapped[datetime] = mapped_column(

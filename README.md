@@ -146,16 +146,27 @@ jineteada_26
 
 ## 📌 Últimos avances
 
-### Julio 2026
+### Agosto 2026
 
-- ✅ Módulo 4 finalizado (Categorías).
-- ✅ Categorías compartidas por campeonato.
-- ✅ Configuración avanzada de categorías.
-- ✅ Inicio y base del Módulo 5 (Jinetes).
-- ✅ Creación del padrón único de jinetes.
-- ✅ Listado de jinetes con búsqueda y filtros.
-- ✅ Integración de Jinetes al Dashboard y menú lateral.
+### ✅ Módulo 5 — Jinetes
 
+Gestión general del padrón de jinetes.
+
+Implementado:
+
+- Alta de jinetes.
+- Listado general.
+- Búsqueda por nombre, apellido, DNI o localidad.
+- Filtro por estado.
+- Ficha individual del jinete.
+- Edición de datos personales y de contacto.
+- Validación de DNI único.
+- Estados:
+  - Activo.
+  - Inactivo.
+  - Suspendido.
+  - Descalificado.
+- Integración con el menú principal y navegación del sistema.
 ---
 
 # 👨‍💻 Autor

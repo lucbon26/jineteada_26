@@ -50,6 +50,14 @@
                             <option value="inactivos" {% if estado=="inactivos" %}selected{% endif %}>
                                 Inactivos
                             </option>
+
+                            <option value="suspendido" {% if estado=="suspendido" %}selected{% endif %}>
+                                Suspendidos
+                            </option>
+
+                            <option value="descalificado" {% if estado=="descalificado" %}selected{% endif %}>
+                                Descalificados
+                            </option>
                         </select>
                     </div>
 
@@ -102,13 +110,24 @@
                             </td>
 
                             <td>
-                                {% if jinete.activo %}
+                                {% if jinete.estado == "activo" %}
                                 <span class="badge text-bg-success">
                                     Activo
                                 </span>
-                                {% else %}
+
+                                {% elif jinete.estado == "inactivo" %}
                                 <span class="badge text-bg-secondary">
                                     Inactivo
+                                </span>
+
+                                {% elif jinete.estado == "suspendido" %}
+                                <span class="badge text-bg-warning">
+                                    Suspendido
+                                </span>
+
+                                {% elif jinete.estado == "descalificado" %}
+                                <span class="badge text-bg-danger">
+                                    Descalificado
                                 </span>
                                 {% endif %}
                             </td>
