@@ -6,136 +6,255 @@
 
     <div class="mb-4">
         <h1 class="h3 mb-1">
-            {% if caballo %}
-            Editar caballo
-            {% else %}
-            Nuevo caballo
-            {% endif %}
+            {% if caballo %}Editar caballo{% else %}Nuevo caballo{% endif %}
         </h1>
-
-        <p class="text-muted mb-0">
-            Datos generales del caballo.
-        </p>
+        <p class="text-muted mb-0">Datos generales del caballo.</p>
     </div>
 
-    <form method="post" action="{% if caballo %}/caballos/{{ caballo.id }}/editar{% else %}/caballos/nuevo{% endif %}">
+    <form
+        method="post"
+        action="{% if caballo %}/caballos/{{ caballo.id }}/editar{% else %}/caballos/nuevo{% endif %}"
+    >
 
         <div class="card shadow-sm mb-4">
-
             <div class="card-header">
                 <strong>Información general</strong>
             </div>
 
             <div class="card-body">
-
                 <div class="row g-3">
 
                     <div class="col-md-6">
-                        <label for="nombre" class="form-label">
-                            Nombre *
-                        </label>
-
-                        <input type="text" class="form-control" id="nombre" name="nombre"
-                            value="{{ caballo.nombre if caballo else '' }}" maxlength="150" required>
+                        <label for="nombre" class="form-label">Nombre *</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nombre"
+                            name="nombre"
+                            value="{{ caballo.nombre if caballo else '' }}"
+                            maxlength="150"
+                            required
+                        >
                     </div>
 
                     <div class="col-md-6">
-                        <label for="tropilla_id" class="form-label">
-                            Tropilla
-                        </label>
-
+                        <label for="tropilla_id" class="form-label">Tropilla</label>
                         <select class="form-select" id="tropilla_id" name="tropilla_id">
-                            <option value="">
-                                Sin tropilla
-                            </option>
-
+                            <option value="">Sin tropilla</option>
                             {% for tropilla in tropillas %}
-
-                            <option value="{{ tropilla.id }}" {% if caballo and caballo.tropilla_id==tropilla.id
-                                %}selected{% endif %}>
+                            <option
+                                value="{{ tropilla.id }}"
+                                {% if caballo and caballo.tropilla_id == tropilla.id %}selected{% endif %}
+                            >
                                 {{ tropilla.nombre }}
                             </option>
-
                             {% endfor %}
-
                         </select>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="pelaje" class="form-label">
-                            Pelaje
-                        </label>
-
-                        <input type="text" class="form-control" id="pelaje" name="pelaje"
-                            value="{{ caballo.pelaje if caballo and caballo.pelaje else '' }}" maxlength="100">
+                        <label for="pelaje" class="form-label">Pelaje</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="pelaje"
+                            name="pelaje"
+                            value="{{ caballo.pelaje if caballo and caballo.pelaje else '' }}"
+                            maxlength="100"
+                        >
                     </div>
 
                     <div class="col-md-6">
-                        <label for="estado" class="form-label">
-                            Estado
-                        </label>
-
+                        <label for="estado" class="form-label">Estado</label>
                         <select class="form-select" id="estado" name="estado">
-
-                            <option value="activo" {% if not caballo or caballo.estado=="activo" %}selected{% endif %}>
-                                Activo
-                            </option>
-
-                            <option value="inactivo" {% if caballo and caballo.estado=="inactivo" %}selected{% endif %}>
-                                Inactivo
-                            </option>
-
-                            <option value="lesionado" {% if caballo and caballo.estado=="lesionado" %}selected{% endif
-                                %}>
-                                Lesionado
-                            </option>
-
-                            <option value="retirado" {% if caballo and caballo.estado=="retirado" %}selected{% endif %}>
-                                Retirado
-                            </option>
-
+                            <option value="activo" {% if not caballo or caballo.estado == "activo" %}selected{% endif %}>Activo</option>
+                            <option value="inactivo" {% if caballo and caballo.estado == "inactivo" %}selected{% endif %}>Inactivo</option>
+                            <option value="lesionado" {% if caballo and caballo.estado == "lesionado" %}selected{% endif %}>Lesionado</option>
+                            <option value="retirado" {% if caballo and caballo.estado == "retirado" %}selected{% endif %}>Retirado</option>
                         </select>
                     </div>
 
                 </div>
-
             </div>
-
         </div>
 
+        {% if caballo %}
         <div class="card shadow-sm mb-4">
-
             <div class="card-header">
-                <strong>Información adicional</strong>
+                <strong>Asignación vigente</strong>
             </div>
 
             <div class="card-body">
+                <div class="row g-3 align-items-end">
 
-                <label for="observaciones" class="form-label">
-                    Observaciones
-                </label>
+                    <div class="col-md-5">
+                        <label for="fechaAsignacion" class="form-label">Fecha</label>
+                        <select class="form-select" id="fechaAsignacion" name="fecha_id">
+                            <option value="">Sin asignación</option>
+                            {% for fecha in fechas %}
+                            <option
+                                value="{{ fecha.id }}"
+                                data-campeonato="{{ fecha.campeonato_id }}"
+                                {% if asignacion and asignacion.fecha_id == fecha.id %}selected{% endif %}
+                            >
+                                {{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <textarea class="form-control" id="observaciones" name="observaciones"
-                    rows="4">{{ caballo.observaciones if caballo and caballo.observaciones else '' }}</textarea>
+                    <div class="col-md-5">
+                        <label for="categoriaAsignacion" class="form-label">Categoría</label>
+                        <select
+                            class="form-select"
+                            id="categoriaAsignacion"
+                            name="categoria_id"
+                            {% if not asignacion %}disabled{% endif %}
+                        >
+                            <option value="">Primero seleccione una fecha...</option>
+                            {% for categoria in categorias %}
+                            <option
+                                value="{{ categoria.id }}"
+                                data-campeonato="{{ categoria.campeonato_id }}"
+                                {% if asignacion and asignacion.categoria_id == categoria.id %}selected{% endif %}
+                            >
+                                {{ categoria.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
+                    <div class="col-md-2">
+                        {% if asignacion %}
+                        <button
+                            type="submit"
+                            class="btn btn-outline-danger w-100"
+                            formaction="/caballos/{{ caballo.id }}/asignaciones/{{ asignacion.id }}/dejar-libre"
+                            formmethod="post"
+                            formnovalidate
+                            onclick="return confirm('¿Dejar este caballo libre de su fecha y categoría actual?');"
+                        >
+                            Dejar libre
+                        </button>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <div class="form-text mt-2">
+                    Cambiar Fecha o Categoría y guardar reasigna al caballo. Solo puede existir una asignación vigente.
+                </div>
+            </div>
+        </div>
+
+        {% if historial %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Historial del caballo</strong>
             </div>
 
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Registro</th>
+                                <th>Campeonato</th>
+                                <th>Fecha</th>
+                                <th>Categoría</th>
+                                <th>Evento</th>
+                                <th>Estado</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in historial %}
+                            <tr>
+                                <td>{{ item.creado_en.strftime("%d/%m/%Y %H:%M") }}</td>
+                                <td>{{ item.campeonato.nombre if item.campeonato else "-" }}</td>
+                                <td>{{ item.fecha.nombre if item.fecha else "-" }}</td>
+                                <td>{{ item.categoria.nombre if item.categoria else "-" }}</td>
+                                <td>{{ item.evento | replace("_", " ") | title }}</td>
+                                <td>{{ item.estado_caballo or "-" }}</td>
+                                <td>{{ item.observaciones or "-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Información adicional</strong>
+            </div>
+            <div class="card-body">
+                <label for="observaciones" class="form-label">Observaciones</label>
+                <textarea
+                    class="form-control"
+                    id="observaciones"
+                    name="observaciones"
+                    rows="4"
+                >{{ caballo.observaciones if caballo and caballo.observaciones else '' }}</textarea>
+            </div>
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-
-            <a href="/caballos" class="btn btn-outline-secondary">
-                Cancelar
-            </a>
-
-            <button type="submit" class="btn btn-primary">
-                Guardar caballo
-            </button>
-
+            <a href="/caballos" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar caballo</button>
         </div>
 
     </form>
-
 </div>
+
+{% if caballo %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fecha = document.getElementById("fechaAsignacion");
+    const categoria = document.getElementById("categoriaAsignacion");
+    const opcionesCategorias = Array.from(
+        categoria.querySelectorAll("option[data-campeonato]")
+    );
+
+    function actualizarCategorias() {
+        const opcionFecha = fecha.options[fecha.selectedIndex];
+        const campeonatoId = opcionFecha ? opcionFecha.dataset.campeonato : "";
+        const valorActual = categoria.value;
+
+        categoria.innerHTML = "";
+
+        const opcionInicial = document.createElement("option");
+        opcionInicial.value = "";
+        opcionInicial.textContent = campeonatoId
+            ? "Seleccionar categoría..."
+            : "Primero seleccione una fecha...";
+        categoria.appendChild(opcionInicial);
+
+        if (!campeonatoId) {
+            categoria.disabled = true;
+            return;
+        }
+
+        opcionesCategorias.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                const copia = opcion.cloneNode(true);
+                if (copia.value === valorActual) {
+                    copia.selected = true;
+                }
+                categoria.appendChild(copia);
+            }
+        });
+
+        categoria.disabled = false;
+    }
+
+    fecha.addEventListener("change", actualizarCategorias);
+    actualizarCategorias();
+});
+</script>
+{% endif %}
 
 {% endblock %}

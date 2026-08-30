@@ -6,10 +6,10 @@ from app.core.database import Base
 
 class CaballoFecha(Base):
     """
-    Relaciona un caballo con una fecha y una categoría.
+    Asignación vigente de un caballo.
 
-    Permite definir qué caballos están disponibles para
-    participar del sorteo de cada categoría en cada fecha.
+    Un caballo puede tener una sola asignación activa a la vez.
+    Las anteriores pasan al historial.
     """
 
     __tablename__ = "caballos_fechas"
@@ -17,17 +17,11 @@ class CaballoFecha(Base):
     __table_args__ = (
         UniqueConstraint(
             "caballo_id",
-            "fecha_id",
-            "categoria_id",
-            name="uq_caballo_fecha_categoria",
+            name="uq_caballo_asignacion_vigente",
         ),
     )
 
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True,
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     caballo_id: Mapped[int] = mapped_column(
         ForeignKey("caballos.id"),

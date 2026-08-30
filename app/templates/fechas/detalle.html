@@ -95,7 +95,8 @@ Fecha del campeonato
                                                 <th class="ps-4">Orden</th>
                                                 <th>Categoría</th>
                                                 <th>Estado</th>
-                                                <th class="text-end pe-4">Caballos</th>
+                                                <th>Caballos asignados</th>
+                                                <th class="text-end pe-4">Acciones</th>
                                             </tr>
                                         </thead>
 
@@ -131,6 +132,12 @@ Fecha del campeonato
                                                         Inactiva
                                                     </span>
                                                     {% endif %}
+                                                </td>
+
+                                                <td>
+                                                    <span class="badge text-bg-light">
+                                                        {{ conteo_caballos.get(categoria.id, 0) }}
+                                                    </span>
                                                 </td>
 
                                                 <td class="text-end pe-4">

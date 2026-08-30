@@ -7,20 +7,11 @@ from app.core.database import Base
 
 
 class Caballo(Base):
-    """
-    Padrón único de caballos.
-
-    Un caballo se registra una sola vez y puede aparecer
-    nuevamente en diferentes fechas.
-    """
+    """Padrón único de caballos."""
 
     __tablename__ = "caballos"
 
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True,
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     nombre: Mapped[str] = mapped_column(
         String(150),
@@ -34,15 +25,8 @@ class Caballo(Base):
         index=True,
     )
 
-    pelaje: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-    )
-
-    observaciones: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
+    pelaje: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     estado: Mapped[str] = mapped_column(
         String(20),
@@ -59,4 +43,10 @@ class Caballo(Base):
     tropilla = relationship(
         "Tropilla",
         back_populates="caballos",
+    )
+
+    historial = relationship(
+        "CaballoHistorial",
+        back_populates="caballo",
+        cascade="all, delete-orphan",
     )

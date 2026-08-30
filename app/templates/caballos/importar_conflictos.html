@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block contenido %}
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Confirmar reasignación</h1>
+        <p class="text-muted mb-0">
+            Solo se muestran los caballos que ya tienen una asignación vigente y cuya fecha todavía no fue sorteada.
+        </p>
+    </div>
+
+    <div class="alert alert-warning">
+        Estos caballos serán reasignados a
+        <strong>{{ fecha_destino.nombre }} · {{ categoria_destino.nombre }}</strong>
+        únicamente si confirma la operación.
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Caballo</th>
+                            <th>Asignación actual</th>
+                            <th>Nueva asignación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in conflictos %}
+                        <tr>
+                            <td><strong>{{ item.caballo.nombre }}</strong></td>
+                            <td>
+                                {{ item.asignacion.fecha.nombre }} ·
+                                <strong>{{ item.asignacion.categoria.nombre }}</strong>
+                            </td>
+                            <td>
+                                {{ fecha_destino.nombre }} ·
+                                <strong>{{ categoria_destino.nombre }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <form method="post" action="/caballos/importar-conflictos/cancelar">
+            <button type="submit" class="btn btn-outline-secondary">Cancelar</button>
+        </form>
+
+        <form method="post" action="/caballos/importar-conflictos/reasignar">
+            <button type="submit" class="btn btn-primary">Reasignar estos caballos</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

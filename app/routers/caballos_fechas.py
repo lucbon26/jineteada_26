@@ -1,50 +1,32 @@
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.caballo import Caballo
 from app.models.caballo_fecha import CaballoFecha
+from app.models.caballo_historial import CaballoHistorial
 from app.models.categoria import Categoria
 from app.models.fecha import Fecha
 
 
 templates = Jinja2Templates(directory="app/templates")
-
-router = APIRouter(
-    tags=["Caballos por fecha"],
-)
+router = APIRouter(tags=["Caballos por fecha"])
 
 
-def obtener_fecha_o_404(
-    fecha_id: int,
-    db: Session,
-) -> Fecha:
+def obtener_fecha_o_404(fecha_id: int, db: Session) -> Fecha:
     fecha = db.get(Fecha, fecha_id)
-
     if fecha is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Fecha no encontrada",
-        )
-
+        raise HTTPException(status_code=404, detail="Fecha no encontrada")
     return fecha
 
 
-def obtener_categoria_o_404(
-    categoria_id: int,
-    db: Session,
-) -> Categoria:
+def obtener_categoria_o_404(categoria_id: int, db: Session) -> Categoria:
     categoria = db.get(Categoria, categoria_id)
-
     if categoria is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Categoría no encontrada",
-        )
-
+        raise HTTPException(status_code=404, detail="Categoría no encontrada")
     return categoria
 
 
@@ -61,42 +43,13 @@ def administrar_caballos_categoria(
     fecha = obtener_fecha_o_404(fecha_id, db)
     categoria = obtener_categoria_o_404(categoria_id, db)
 
-    # Evita asociar a una fecha una categoría
-    # perteneciente a otro campeonato.
     if categoria.campeonato_id != fecha.campeonato_id:
         raise HTTPException(
             status_code=400,
-            detail="La categoría no pertenece al campeonato de esta fecha",
+            detail="La categoría no pertenece al campeonato de esta fecha.",
         )
 
-    caballos_ocupados_en_otras_categorias = db.scalars(
-    select(CaballoFecha.caballo_id).where(
-        CaballoFecha.fecha_id == fecha_id,
-        CaballoFecha.categoria_id != categoria_id,
-    )
-    ).all()
-
-    consulta_caballos = (
-        select(Caballo)
-        .where(Caballo.estado == "activo")
-    )
-
-    if caballos_ocupados_en_otras_categorias:
-        consulta_caballos = consulta_caballos.where(
-            Caballo.id.not_in(
-                caballos_ocupados_en_otras_categorias
-            )
-        )
-
-    consulta_caballos = consulta_caballos.order_by(
-        Caballo.nombre.asc()
-    )
-
-    caballos = db.scalars(
-        consulta_caballos
-    ).all()
-
-    asignaciones = db.scalars(
+    asignaciones_categoria = db.scalars(
         select(CaballoFecha).where(
             CaballoFecha.fecha_id == fecha_id,
             CaballoFecha.categoria_id == categoria_id,
@@ -105,8 +58,29 @@ def administrar_caballos_categoria(
 
     caballos_asignados = {
         asignacion.caballo_id
-        for asignacion in asignaciones
+        for asignacion in asignaciones_categoria
     }
+
+    # Oculta caballos que ya tienen cualquier otra asignación vigente.
+    caballos_ocupados = db.scalars(
+        select(CaballoFecha.caballo_id).where(
+            ~(
+                (CaballoFecha.fecha_id == fecha_id)
+                & (CaballoFecha.categoria_id == categoria_id)
+            )
+        )
+    ).all()
+
+    consulta = select(Caballo).where(Caballo.estado == "activo")
+
+    if caballos_ocupados:
+        consulta = consulta.where(
+            Caballo.id.not_in(caballos_ocupados)
+        )
+
+    caballos = db.scalars(
+        consulta.order_by(Caballo.nombre.asc())
+    ).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -118,10 +92,7 @@ def administrar_caballos_categoria(
             "caballos": caballos,
             "caballos_asignados": caballos_asignados,
             "menu_activo": "caballos",
-            "usuario_nombre": request.session.get(
-                "usuario_nombre",
-                "Administrador",
-            ),
+            "usuario_nombre": request.session.get("usuario_nombre", "Administrador"),
         },
     )
 
@@ -141,35 +112,75 @@ def guardar_caballos_categoria(
     if categoria.campeonato_id != fecha.campeonato_id:
         raise HTTPException(
             status_code=400,
-            detail="La categoría no pertenece al campeonato de esta fecha",
+            detail="La categoría no pertenece al campeonato de esta fecha.",
         )
 
-    # Borra la selección anterior para esta fecha/categoría.
-    db.execute(
-        delete(CaballoFecha).where(
+    seleccionados = set(caballo_ids)
+
+    asignaciones_actuales = db.scalars(
+        select(CaballoFecha).where(
             CaballoFecha.fecha_id == fecha_id,
             CaballoFecha.categoria_id == categoria_id,
         )
-    )
+    ).all()
 
-    # Guarda la nueva selección.
-    for caballo_id in caballo_ids:
+    ids_actuales = {
+        asignacion.caballo_id
+        for asignacion in asignaciones_actuales
+    }
+
+    # Solo los destildados se liberan. Antes quedan registrados en historial.
+    for asignacion in asignaciones_actuales:
+        if asignacion.caballo_id in seleccionados:
+            continue
+
+        caballo = db.get(Caballo, asignacion.caballo_id)
+
+        db.add(
+            CaballoHistorial(
+                caballo_id=asignacion.caballo_id,
+                campeonato_id=fecha.campeonato_id,
+                fecha_id=fecha_id,
+                categoria_id=categoria_id,
+                evento="liberado",
+                estado_caballo=(caballo.estado if caballo else None),
+                observaciones=(
+                    "El caballo fue dejado libre desde la administración "
+                    "de la categoría."
+                ),
+            )
+        )
+
+        db.delete(asignacion)
+
+    # Agrega únicamente caballos nuevos en la selección.
+    for caballo_id in seleccionados - ids_actuales:
         caballo = db.get(Caballo, caballo_id)
-
         if caballo is None:
             continue
 
-        asignacion = CaballoFecha(
-            caballo_id=caballo_id,
-            fecha_id=fecha_id,
-            categoria_id=categoria_id,
+        asignacion_existente = db.scalar(
+            select(CaballoFecha).where(
+                CaballoFecha.caballo_id == caballo_id
+            )
         )
 
-        db.add(asignacion)
+        if asignacion_existente is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"El caballo '{caballo.nombre}' ya tiene "
+                    "una asignación vigente."
+                ),
+            )
+
+        db.add(
+            CaballoFecha(
+                caballo_id=caballo_id,
+                fecha_id=fecha_id,
+                categoria_id=categoria_id,
+            )
+        )
 
     db.commit()
-
-    return RedirectResponse(
-        url=f"/fechas/{fecha_id}",
-        status_code=303,
-    )
+    return RedirectResponse(url=f"/fechas/{fecha_id}", status_code=303)

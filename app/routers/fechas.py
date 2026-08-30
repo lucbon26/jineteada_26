@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models.campeonato import Campeonato
 from app.models.fecha import Fecha
 from app.models.categoria import Categoria
+from app.models.caballo_fecha import CaballoFecha
 
 router = APIRouter(
     prefix="/fechas",
@@ -59,6 +60,16 @@ def detalle_fecha(
     )
 
     categorias = db.scalars(consulta).all()
+    
+    conteo_caballos = {}
+    
+    for categoria in categorias:
+        cantidad = db.query(CaballoFecha).filter(
+            CaballoFecha.fecha_id == fecha_evento.id,
+            CaballoFecha.categoria_id == categoria.id,
+        ).count()
+
+        conteo_caballos[categoria.id] = cantidad
 
 
     return templates.TemplateResponse(
@@ -68,6 +79,7 @@ def detalle_fecha(
             "fecha_evento": fecha_evento,
             "campeonato": fecha_evento.campeonato,
             "categorias": categorias,
+            "conteo_caballos": conteo_caballos,
             "menu_activo": "campeonatos",
             "usuario_nombre": request.session.get(
                 "usuario_nombre",
@@ -75,6 +87,8 @@ def detalle_fecha(
             ),
         },
     )
+
+        
 
 
 @router.get(
