@@ -1,10 +1,13 @@
 # 🐎 Sistema de Gestión de Jineteadas
 
-Sistema web desarrollado en **Python + FastAPI** para la administración integral de campeonatos de jineteadas.
+Sistema web desarrollado en **Python + FastAPI** para la administración
+integral de campeonatos de jineteadas.
 
-El objetivo es brindar una herramienta moderna, rápida y transparente para gestionar todo el ciclo de una competencia, desde la organización del campeonato hasta los resultados finales.
+El objetivo es brindar una herramienta moderna, rápida y transparente
+para gestionar todo el ciclo de una competencia, desde la organización
+del campeonato hasta los resultados finales.
 
----
+------------------------------------------------------------------------
 
 # 🚀 Estado del proyecto
 
@@ -12,93 +15,114 @@ El objetivo es brindar una herramienta moderna, rápida y transparente para gest
 
 ### Módulos completados
 
-- ✅ Autenticación
-- ✅ Dashboard
-- ✅ Campeonatos
-- ✅ Fechas
-- ✅ Categorías
-- ✅ Jinetes
+-   ✅ Autenticación
+-   ✅ Dashboard
+-   ✅ Campeonatos
+-   ✅ Fechas
+-   ✅ Categorías
+-   ✅ Jinetes
+-   ✅ Caballos
+-   ✅ Tropillas
 
 ### Próximos módulos
 
-- 🐎 Caballos
-- 🤠 Tropillas
-- 📝 Inscripciones
-- 🎲 Sorteo
-- 🏆 Resultados
-- 📄 Reportes PDF
-- 📊 Estadísticas
-- 📝 Auditoría
+-   📝 Inscripciones
+-   🎲 Sorteo
+-   🏆 Resultados
+-   📄 Reportes PDF
+-   📊 Estadísticas
+-   📝 Auditoría
 
----
+------------------------------------------------------------------------
 
 # ✨ Funcionalidades
 
 ## Actualmente disponibles
 
-- 🔐 Autenticación de usuarios
-- 📋 Dashboard administrativo
-- 🏆 Gestión de campeonatos
-- 📅 Administración de fechas
-- 🏁 Categorías compartidas por campeonato
-- ⚙ Configuración avanzada de categorías
-- 👤 Padrón de jinetes
-- 🔍 Búsqueda de jinetes
-- 👥 Usuarios con autenticación
+-   🔐 Autenticación de usuarios
+-   📋 Dashboard administrativo
+-   🏆 Gestión de campeonatos
+-   📅 Administración de fechas
+-   🏁 Categorías compartidas por campeonato
+-   ⚙️ Configuración avanzada de categorías
+-   👤 Padrón único de jinetes
+-   🔍 Búsqueda de jinetes
+-   🐎 Padrón único de caballos
+-   🤠 Gestión de tropillas
+-   🔗 Asociación de caballos con tropillas
+-   🟢 Estados de caballos
+-   📥 Modelo e importación masiva de caballos desde Excel
+-   🔎 Detección de caballos existentes durante la importación
+-   📅 Selección de Fecha + Categoría durante la carga
+-   🔒 Una única asignación vigente Fecha + Categoría por caballo
+-   🔄 Reasignación manual de caballos
+-   ⚡ Reasignación automática cuando corresponde
+-   ⚠️ Confirmación de conflictos antes de reasignar
+-   🆓 Liberación de caballos de su asignación vigente
+-   🔍 Filtros por estado, fecha y categoría
+-   📚 Historial de participaciones, reasignaciones y cambios de estado
+-   👥 Usuarios con autenticación
 
 ## Próximamente
 
-- 🐎 Gestión de caballos
-- 🤠 Gestión de tropillas
-- 📥 Importación masiva desde Excel
-- 📱 Confirmación mediante QR
-- 🎲 Sorteo transparente
-- 📄 Generación automática de PDF
-- 🏆 Clasificaciones
-- 📊 Estadísticas
-- 📝 Auditoría completa
+-   📝 Gestión de inscripciones
+-   📱 Confirmación mediante QR
+-   🎲 Sorteo transparente
+-   📄 Generación automática de PDF
+-   🏆 Clasificaciones y resultados
+-   📊 Estadísticas
+-   📝 Auditoría completa
 
----
+------------------------------------------------------------------------
 
 # 🛠 Stack tecnológico
 
-- Python 3.14
-- FastAPI
-- SQLAlchemy 2
-- Alembic
-- SQLite (desarrollo)
-- PostgreSQL (producción)
-- Jinja2
-- Bootstrap 5
+-   Python 3.14
+-   FastAPI
+-   SQLAlchemy 2
+-   Alembic
+-   SQLite (desarrollo)
+-   PostgreSQL (producción)
+-   Jinja2
+-   Bootstrap 5
+-   openpyxl
 
----
+------------------------------------------------------------------------
 
 # 📂 Arquitectura actual
 
-```
+``` text
 Campeonato
 │
 ├── Categorías
 │
-├── Fechas
+└── Fechas
+      │
+      └── Asignación vigente de caballos
+            └── Fecha + Categoría
+
+Padrones reutilizables
 │
-└── (próximamente)
-      ├── Caballos
-      ├── Tropillas
-      ├── Inscripciones
-      ├── Sorteo
-      └── Resultados
+├── Jinetes
+├── Caballos
+│   └── Historial de participaciones y eventos
+└── Tropillas
 ```
 
-Las **categorías pertenecen al campeonato** y son compartidas por todas sus fechas.
+Las **categorías pertenecen al campeonato** y son compartidas por todas
+sus fechas.
 
-Los **jinetes** forman un padrón único reutilizable entre campeonatos.
+Los **jinetes, caballos y tropillas** forman padrones reutilizables.
 
----
+Cada caballo puede tener **una sola asignación vigente** de Fecha +
+Categoría. Las asignaciones anteriores, reasignaciones y cambios
+relevantes de estado se conservan en su historial.
+
+------------------------------------------------------------------------
 
 # 📂 Estructura del proyecto
 
-```text
+``` text
 jineteada_26
 │
 ├── app/
@@ -120,56 +144,77 @@ jineteada_26
 └── README.md
 ```
 
----
+------------------------------------------------------------------------
 
 # 🗺 Roadmap
 
-- [x] Arquitectura
-- [x] Base de datos
-- [x] Login
-- [x] Dashboard
-- [x] Campeonatos
-- [x] Fechas
-- [x] Categorías
-- [x] Jinetes
-- [ ] Caballos 🚧 En desarrollo
-- [ ] Tropillas 🚧 En desarrollo
-- [ ] Inscripciones
-- [ ] QR
-- [ ] Sorteo
-- [ ] Resultados
-- [ ] Reportes PDF
-- [ ] Estadísticas
-- [ ] Auditoría
+-   [x] Arquitectura
+-   [x] Base de datos
+-   [x] Login
+-   [x] Dashboard
+-   [x] Campeonatos
+-   [x] Fechas
+-   [x] Categorías
+-   [x] Jinetes
+-   [x] Caballos
+-   [x] Tropillas
+-   [ ] Inscripciones
+-   [ ] QR
+-   [ ] Sorteo
+-   [ ] Resultados
+-   [ ] Reportes PDF
+-   [ ] Estadísticas
+-   [ ] Auditoría
 
----
+------------------------------------------------------------------------
 
-## 📌 Últimos avances
+# 📌 Últimos avances
 
-### Agosto 2026
+## Agosto 2026
 
-### 🚧 Módulo 6 — Caballos y Tropillas
+### ✅ Módulo 6 --- Caballos y Tropillas
 
-En desarrollo.
+**Completado y probado.**
 
-Implementado hasta el momento:
+Implementado:
 
-- [x] Padrón de tropillas.
-- [x] Alta y edición de tropillas.
-- [x] Padrón de caballos.
-- [x] Alta y edición de caballos.
-- [x] Asociación de caballos con tropillas.
-- [x] Estados de caballos.
-- [x] Asociación Caballo → Fecha → Categoría.
-- [x] Selección de caballos disponibles por categoría.
-- [x] Exclusividad de categoría por fecha:
-      un caballo no puede participar en más de una categoría en la misma fecha.
-- [ ] Resumen de caballos asignados por categoría.
-- [ ] Carga/importación masiva desde Excel.
-- [ ] Validaciones finales del módulo.
+-   [x] Padrón de tropillas.
+-   [x] Alta y edición de tropillas.
+-   [x] Padrón de caballos.
+-   [x] Alta y edición de caballos.
+-   [x] Asociación de caballos con tropillas.
+-   [x] Estados de caballos: activo, inactivo, lesionado y retirado.
+-   [x] Modelo Excel descargable para carga de caballos.
+-   [x] Importación masiva de caballos desde Excel.
+-   [x] Creación de tropillas durante la importación cuando corresponde.
+-   [x] Detección de caballos existentes para evitar duplicados.
+-   [x] Selección de Fecha y Categoría durante la importación.
+-   [x] Una sola asignación vigente Fecha + Categoría por caballo.
+-   [x] Reasignación manual desde la ficha individual.
+-   [x] Reasignación automática cuando la asignación anterior
+    corresponde a una fecha ya sorteada.
+-   [x] Detección de conflictos cuando la asignación anterior todavía no
+    puede reemplazarse automáticamente.
+-   [x] Pantalla de confirmación mostrando únicamente los caballos
+    realmente en conflicto.
+-   [x] Liberación inmediata de la asignación vigente.
+-   [x] Filtros de caballos por estado, fecha y categoría.
+-   [x] Historial permanente de participaciones, reasignaciones y
+    cambios de estado.
+-   [x] Conservación histórica de estados relevantes como lesiones.
+-   [x] Validaciones finales del módulo.
+
+### ➡️ Próximo módulo
+
+**Módulo 7 --- Inscripciones**
+
+------------------------------------------------------------------------
 
 # 👨‍💻 Autor
 
 **Lucas Bonfil**
 
-Sistema desarrollado para la administración profesional de campeonatos de jineteadas, priorizando la transparencia de los sorteos, la reutilización de datos y la facilidad de uso para organizadores, secretaría y locución.
+Sistema desarrollado para la administración profesional de campeonatos
+de jineteadas, priorizando la transparencia de los sorteos, la
+reutilización de datos y la facilidad de uso para organizadores,
+secretaría y locución.
