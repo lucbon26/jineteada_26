@@ -1,84 +1,39 @@
+
 {% extends "base.html" %}
 
 {% block contenido %}
-
 <div class="container-fluid">
 
     <nav class="mb-3">
-        <a href="/">Inicio</a>
-        /
-        <a href="/jinetes">Jinetes</a>
-        /
-        <strong>
-            {{ jinete.apellidos }}, {{ jinete.nombres }}
-        </strong>
+        <a href="/">Inicio</a> /
+        <a href="/jinetes">Jinetes</a> /
+        <strong>{{ jinete.apellidos }}, {{ jinete.nombres }}</strong>
     </nav>
 
     <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
-
             <div class="d-flex justify-content-between align-items-start mb-4">
-
                 <div>
-                    <h1 class="h3 mb-1">
-                        {{ jinete.apellidos }}, {{ jinete.nombres }}
-                    </h1>
-
-                    <p class="text-muted mb-0">
-                        DNI {{ jinete.dni }}
-                    </p>
+                    <h1 class="h3 mb-1">{{ jinete.apellidos }}, {{ jinete.nombres }}</h1>
+                    <p class="text-muted mb-0">DNI {{ jinete.dni }}</p>
                 </div>
 
                 <div class="d-flex gap-2">
-
-                    <a href="/jinetes/{{ jinete.id }}/editar" class="btn btn-outline-primary">
-                        Editar
-                    </a>
-
-                    <a href="/jinetes" class="btn btn-outline-secondary">
-                        Volver
-                    </a>
-
+                    <a href="/jinetes/{{ jinete.id }}/editar" class="btn btn-outline-primary">Editar</a>
+                    <a href="/jinetes" class="btn btn-outline-secondary">Volver</a>
                 </div>
-
             </div>
 
             <hr>
 
             <div class="row g-4">
-
                 <div class="col-md-3">
-                    <div class="text-muted small">
-                        Estado
-                    </div>
-
-                    {% if jinete.estado == "activo" %}
-                    <span class="badge text-bg-success">
-                        Activo
-                    </span>
-
-                    {% elif jinete.estado == "inactivo" %}
-                    <span class="badge text-bg-secondary">
-                        Inactivo
-                    </span>
-
-                    {% elif jinete.estado == "suspendido" %}
-                    <span class="badge text-bg-warning">
-                        Suspendido
-                    </span>
-
-                    {% elif jinete.estado == "descalificado" %}
-                    <span class="badge text-bg-danger">
-                        Descalificado
-                    </span>
-                    {% endif %}
+                    <div class="text-muted small">Estado</div>
+                    <strong>{{ jinete.estado|capitalize }}</strong>
                 </div>
 
                 <div class="col-md-3">
-                    <div class="text-muted small">
-                        Fecha de nacimiento
-                    </div>
-
+                    <div class="text-muted small">Fecha de nacimiento</div>
                     <strong>
                         {% if jinete.fecha_nacimiento %}
                         {{ jinete.fecha_nacimiento.strftime("%d/%m/%Y") }}
@@ -89,132 +44,137 @@
                 </div>
 
                 <div class="col-md-3">
-                    <div class="text-muted small">
-                        Sexo
-                    </div>
-
-                    <strong>
-                        {{ jinete.sexo or "Sin definir" }}
-                    </strong>
+                    <div class="text-muted small">Celular</div>
+                    <strong>{{ jinete.celular or "Sin definir" }}</strong>
                 </div>
 
                 <div class="col-md-3">
-                    <div class="text-muted small">
-                        Nacionalidad
-                    </div>
-
-                    <strong>
-                        {{ jinete.nacionalidad or "Sin definir" }}
-                    </strong>
+                    <div class="text-muted small">Localidad</div>
+                    <strong>{{ jinete.localidad or "Sin definir" }}</strong>
                 </div>
-
             </div>
-
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
 
-        <div class="col-md-6">
-
+        <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header">
-                    <strong>Contacto y ubicación</strong>
+                    <strong>Categorías por campeonato</strong>
                 </div>
-
-                <div class="card-body">
-
-                    <div class="mb-3">
-                        <div class="text-muted small">
-                            Celular
-                        </div>
-
-                        <strong>
-                            {{ jinete.celular or "Sin definir" }}
-                        </strong>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Campeonato</th>
+                                    <th>Categoría</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asignacion in campeonatos_jinete %}
+                                <tr>
+                                    <td>{{ asignacion.campeonato.nombre if asignacion.campeonato else asignacion.campeonato_id }}</td>
+                                    <td>{{ asignacion.categoria.nombre if asignacion.categoria else "Sin definir" }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-4">
+                                        Sin campeonatos registrados.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="mb-3">
-                        <div class="text-muted small">
-                            Correo electrónico
-                        </div>
-
-                        <strong>
-                            {{ jinete.email or "Sin definir" }}
-                        </strong>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <strong>Historial de fechas</strong>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Categoría</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for participacion in participaciones %}
+                                <tr>
+                                    <td>
+                                        {% if participacion.fecha %}
+                                        {{ participacion.fecha.nombre }} -
+                                        {{ participacion.fecha.fecha.strftime("%d/%m/%Y") }}
+                                        {% else %}
+                                        {{ participacion.fecha_id }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ participacion.categoria.nombre if participacion.categoria else participacion.categoria_id }}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-4">
+                                        Sin participaciones registradas.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="mb-3">
-                        <div class="text-muted small">
-                            Provincia
-                        </div>
+    </div>
 
-                        <strong>
-                            {{ jinete.provincia or "Sin definir" }}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <div class="text-muted small">
-                            Localidad
-                        </div>
-
-                        <strong>
-                            {{ jinete.localidad or "Sin definir" }}
-                        </strong>
-                    </div>
-
+    <div class="card shadow-sm">
+        <div class="card-header"><strong>Información adicional</strong></div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="text-muted small">Sexo</div>
+                    <strong>{{ jinete.sexo or "Sin definir" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Nacionalidad</div>
+                    <strong>{{ jinete.nacionalidad or "Sin definir" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Correo</div>
+                    <strong>{{ jinete.email or "Sin definir" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Provincia</div>
+                    <strong>{{ jinete.provincia or "Sin definir" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Club o agrupación</div>
+                    <strong>{{ jinete.club_agrupacion or "Sin definir" }}</strong>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Categoría habitual</div>
+                    <strong>{{ jinete.categoria_habitual or "Sin definir" }}</strong>
                 </div>
             </div>
 
-        </div>
+            <hr>
 
-        <div class="col-md-6">
-
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    <strong>Información deportiva</strong>
-                </div>
-
-                <div class="card-body">
-
-                    <div class="mb-3">
-                        <div class="text-muted small">
-                            Categoría habitual
-                        </div>
-
-                        <strong>
-                            {{ jinete.categoria_habitual or "Sin definir" }}
-                        </strong>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="text-muted small">
-                            Club o agrupación
-                        </div>
-
-                        <strong>
-                            {{ jinete.club_agrupacion or "Sin definir" }}
-                        </strong>
-                    </div>
-
-                    <div>
-                        <div class="text-muted small">
-                            Observaciones
-                        </div>
-
-                        <p class="mb-0">
-                            {{ jinete.observaciones or "Sin observaciones" }}
-                        </p>
-                    </div>
-
-                </div>
+            <div>
+                <div class="text-muted small">Observaciones</div>
+                <p class="mb-0">{{ jinete.observaciones or "Sin observaciones" }}</p>
             </div>
-
         </div>
-
     </div>
 
 </div>
-
 {% endblock %}

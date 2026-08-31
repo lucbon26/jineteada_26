@@ -678,6 +678,47 @@ def cancelar_reasignacion_importacion(request: Request):
     return RedirectResponse(url="/caballos", status_code=303)
 
 
+
+@router.post("/eliminar-masivo")
+async def eliminar_caballos_masivo(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    formulario = await request.form()
+    ids = []
+    for valor in formulario.getlist("seleccionados"):
+        try:
+            ids.append(int(valor))
+        except (TypeError, ValueError):
+            pass
+
+    ids = list(dict.fromkeys(ids))
+    eliminados = 0
+
+    for caballo_id in ids:
+        caballo = db.get(Caballo, caballo_id)
+        if caballo is None:
+            continue
+
+        asignacion = obtener_asignacion_vigente(caballo_id, db)
+        if asignacion is not None:
+            db.delete(asignacion)
+
+        for item in db.scalars(
+            select(CaballoHistorial).where(CaballoHistorial.caballo_id == caballo_id)
+        ).all():
+            db.delete(item)
+
+        db.delete(caballo)
+        eliminados += 1
+
+    db.commit()
+    return RedirectResponse(
+        url=f"/caballos?eliminados={eliminados}",
+        status_code=303,
+    )
+
+
 @router.get("/{caballo_id}/editar", response_class=HTMLResponse)
 def formulario_editar_caballo(
     caballo_id: int,

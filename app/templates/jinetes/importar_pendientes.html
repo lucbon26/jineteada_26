@@ -1,0 +1,101 @@
+
+{% extends "base.html" %}
+
+{% block title %}Resolver categorías{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Resolver categorías de jinetes</h1>
+        <p class="text-muted mb-0">
+            Fecha destino: <strong>{{ fecha.nombre }}</strong>
+        </p>
+    </div>
+
+    <div class="alert alert-warning">
+        Estos jinetes necesitan una categoría definida para el campeonato o presentan una categoría distinta a la ya registrada.
+    </div>
+
+    <form method="post" action="/jinetes/importar-pendientes/resolver">
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Jinete</th>
+                                <th>DNI</th>
+                                <th>Situación</th>
+                                <th>Categoría actual</th>
+                                <th>Categoría Excel</th>
+                                <th>Nueva categoría</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <strong>
+                                        {{ item.jinete.apellidos }}, {{ item.jinete.nombres }}
+                                    </strong>
+                                </td>
+
+                                <td>{{ item.jinete.dni }}</td>
+
+                                <td>
+                                    {% if item.motivo == "sin_categoria" %}
+                                    <span class="badge text-bg-warning">Sin categoría</span>
+                                    {% else %}
+                                    <span class="badge text-bg-danger">Conflicto</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ item.categoria_actual.nombre if item.categoria_actual else "Sin definir" }}
+                                </td>
+
+                                <td>
+                                    {{ item.categoria_excel or "Vacía / no válida" }}
+                                </td>
+
+                                <td style="min-width: 220px;">
+                                    <select class="form-select" name="categoria_{{ item.jinete.id }}" required>
+                                        <option value="">Seleccionar</option>
+                                        {% for categoria in categorias %}
+                                        <option value="{{ categoria.id }}">
+                                            {{ categoria.nombre }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <button
+                type="submit"
+                formaction="/jinetes/importar-pendientes/cancelar"
+                class="btn btn-outline-secondary"
+                formnovalidate>
+                Cancelar
+            </button>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar y continuar
+            </button>
+        </div>
+
+    </form>
+
+</div>
+{% endblock %}

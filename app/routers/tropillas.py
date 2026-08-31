@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.tropilla import Tropilla
+from app.models.caballo import Caballo
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -136,6 +137,49 @@ def crear_tropilla(
 
     return RedirectResponse(
         url="/tropillas",
+        status_code=303,
+    )
+
+
+
+@router.post("/eliminar-masivo")
+async def eliminar_tropillas_masivo(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    formulario = await request.form()
+    ids = []
+    for valor in formulario.getlist("seleccionados"):
+        try:
+            ids.append(int(valor))
+        except (TypeError, ValueError):
+            pass
+
+    ids = list(dict.fromkeys(ids))
+    eliminados = 0
+    omitidos = 0
+
+    for tropilla_id in ids:
+        tropilla = db.get(Tropilla, tropilla_id)
+        if tropilla is None:
+            continue
+
+        caballo_asociado = db.scalar(
+            select(Caballo.id)
+            .where(Caballo.tropilla_id == tropilla_id)
+            .limit(1)
+        )
+
+        if caballo_asociado is not None:
+            omitidos += 1
+            continue
+
+        db.delete(tropilla)
+        eliminados += 1
+
+    db.commit()
+    return RedirectResponse(
+        url=f"/tropillas?eliminados={eliminados}&omitidos={omitidos}",
         status_code=303,
     )
 

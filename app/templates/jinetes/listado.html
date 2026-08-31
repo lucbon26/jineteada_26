@@ -13,24 +13,77 @@
             </p>
         </div>
 
-        <a href="/jinetes/nuevo" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i>
-            Nuevo jinete
-        </a>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger btn-masivo" data-target="jinetes">
+                Eliminar masivo
+            </button>
+
+            <a href="/jinetes/modelo-excel" class="btn btn-outline-success">
+                📥 Descargar modelo Excel
+            </a>
+
+            <button
+                type="button"
+                class="btn btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#modalImportarJinetes"
+            >
+                📤 Importar Excel
+            </button>
+
+            <a href="/jinetes/nuevo" class="btn btn-primary">
+                Nuevo jinete
+            </a>
+        </div>
     </div>
+
+    {% if request.query_params.get("eliminados") %}
+    <div class="alert alert-success">
+        Se eliminaron <strong>{{ request.query_params.get("eliminados") }}</strong> jinetes.
+    </div>
+    {% endif %}
+
+    {% if importados or existentes or ya_en_fecha or avanzados or errores_importacion %}
+    <div class="alert alert-success">
+        <strong>Importación finalizada.</strong>
+
+        <div class="mt-2">
+            Jinetes nuevos:
+            <strong>{{ importados or 0 }}</strong>
+
+            · Ya existentes:
+            <strong>{{ existentes or 0 }}</strong>
+
+            · Incorporados a la fecha:
+            <strong>{{ avanzados or 0 }}</strong>
+
+            · Ya estaban en la fecha:
+            <strong>{{ ya_en_fecha or 0 }}</strong>
+
+            · Errores:
+            <strong>{{ errores_importacion or 0 }}</strong>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form method="get" action="/jinetes">
                 <div class="row g-3">
 
-                    <div class="col-md-8">
+                    <div class="col-md-4">
                         <label for="buscar" class="form-label">
                             Buscar
                         </label>
 
-                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}"
-                            placeholder="Nombre, apellido, DNI o localidad">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="buscar"
+                            name="buscar"
+                            value="{{ buscar }}"
+                            placeholder="Apellido, nombre, DNI o localidad"
+                        >
                     </div>
 
                     <div class="col-md-2">
@@ -39,25 +92,60 @@
                         </label>
 
                         <select class="form-select" id="estado" name="estado">
-                            <option value="todos" {% if estado=="todos" %}selected{% endif %}>
-                                Todos
+                            <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
+                            <option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option>
+                            <option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivos</option>
+                            <option value="suspendido" {% if estado == "suspendido" %}selected{% endif %}>Suspendidos</option>
+                            <option value="descalificado" {% if estado == "descalificado" %}selected{% endif %}>Descalificados</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="fechaFiltro" class="form-label">
+                            Fecha
+                        </label>
+
+                        <select class="form-select" id="fechaFiltro" name="fecha_id">
+                            <option value="0" {% if fecha_id == 0 %}selected{% endif %}>
+                                Todas
                             </option>
 
-                            <option value="activos" {% if estado=="activos" %}selected{% endif %}>
-                                Activos
+                            <option value="-1" {% if fecha_id == -1 %}selected{% endif %}>
+                                Sin fecha
                             </option>
 
-                            <option value="inactivos" {% if estado=="inactivos" %}selected{% endif %}>
-                                Inactivos
+                            {% for fecha in fechas %}
+                            <option
+                                value="{{ fecha.id }}"
+                                data-campeonato="{{ fecha.campeonato_id }}"
+                                {% if fecha_id == fecha.id %}selected{% endif %}
+                            >
+                                {{ fecha.nombre }}
+                                {% if fecha.fecha %}
+                                - {{ fecha.fecha.strftime("%d/%m/%Y") }}
+                                {% endif %}
                             </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                            <option value="suspendido" {% if estado=="suspendido" %}selected{% endif %}>
-                                Suspendidos
-                            </option>
+                    <div class="col-md-2">
+                        <label for="categoriaFiltro" class="form-label">
+                            Categoría
+                        </label>
 
-                            <option value="descalificado" {% if estado=="descalificado" %}selected{% endif %}>
-                                Descalificados
+                        <select class="form-select" id="categoriaFiltro" name="categoria_id">
+                            <option value="0">Todas</option>
+
+                            {% for categoria in categorias %}
+                            <option
+                                value="{{ categoria.id }}"
+                                data-campeonato="{{ categoria.campeonato_id }}"
+                                {% if categoria_id == categoria.id %}selected{% endif %}
+                            >
+                                {{ categoria.nombre }}
                             </option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -72,18 +160,27 @@
         </div>
     </div>
 
+    <form method="post" action="/jinetes/eliminar-masivo" id="formMasivo-jinetes">
+        <div class="d-none mb-3 barra-masiva" id="barra-jinetes">
+            <button type="button" class="btn btn-outline-secondary cancelar-masivo" data-target="jinetes">Cancelar</button>
+            <button type="submit" class="btn btn-danger eliminar-seleccionados" data-target="jinetes" disabled>Eliminar seleccionados (0)</button>
+        </div>
+
     <div class="card shadow-sm">
         <div class="card-body p-0">
-
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
 
                     <thead class="table-light">
                         <tr>
+                            <th class="col-seleccion d-none" style="width:45px">
+                                <input type="checkbox" class="form-check-input seleccionar-todos" data-target="jinetes">
+                            </th>
                             <th>Apellido y nombre</th>
                             <th>DNI</th>
                             <th>Localidad</th>
                             <th>Celular</th>
+                            <th>Categoría</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -92,52 +189,54 @@
                     <tbody>
                         {% for jinete in jinetes %}
                         <tr>
+                            <td class="col-seleccion d-none">
+                                <input type="checkbox" class="form-check-input item-masivo" data-target="jinetes" name="seleccionados" value="{{ jinete.id }}">
+                            </td>
                             <td>
                                 <strong>
-                                    {{ jinete.apellidos }},
-                                    {{ jinete.nombres }}
+                                    {{ jinete.apellidos }}, {{ jinete.nombres }}
                                 </strong>
                             </td>
 
                             <td>{{ jinete.dni }}</td>
+                            <td>{{ jinete.localidad or "-" }}</td>
+                            <td>{{ jinete.celular or "-" }}</td>
 
                             <td>
-                                {{ jinete.localidad or "-" }}
-                            </td>
-
-                            <td>
-                                {{ jinete.celular or "-" }}
+                                {% set categorias_jinete = categorias_por_jinete.get(jinete.id, []) %}
+                                {% if categorias_jinete %}
+                                    {{ categorias_jinete | join(" / ") }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
 
                             <td>
                                 {% if jinete.estado == "activo" %}
-                                <span class="badge text-bg-success">
-                                    Activo
-                                </span>
-
+                                <span class="badge text-bg-success">Activo</span>
                                 {% elif jinete.estado == "inactivo" %}
-                                <span class="badge text-bg-secondary">
-                                    Inactivo
-                                </span>
-
+                                <span class="badge text-bg-secondary">Inactivo</span>
                                 {% elif jinete.estado == "suspendido" %}
-                                <span class="badge text-bg-warning">
-                                    Suspendido
-                                </span>
-
+                                <span class="badge text-bg-warning">Suspendido</span>
                                 {% elif jinete.estado == "descalificado" %}
-                                <span class="badge text-bg-danger">
-                                    Descalificado
-                                </span>
+                                <span class="badge text-bg-danger">Descalificado</span>
+                                {% else %}
+                                <span class="badge text-bg-secondary">{{ jinete.estado }}</span>
                                 {% endif %}
                             </td>
 
                             <td class="text-end">
-                                <a href="/jinetes/{{ jinete.id }}" class="btn btn-sm btn-outline-secondary">
+                                <a
+                                    href="/jinetes/{{ jinete.id }}"
+                                    class="btn btn-sm btn-outline-secondary"
+                                >
                                     Ver
                                 </a>
 
-                                <a href="/jinetes/{{ jinete.id }}/editar" class="btn btn-sm btn-outline-primary">
+                                <a
+                                    href="/jinetes/{{ jinete.id }}/editar"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
                                     Editar
                                 </a>
                             </td>
@@ -145,7 +244,7 @@
 
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
+                            <td colspan="8" class="text-center text-muted py-5">
                                 No hay jinetes registrados.
                             </td>
                         </tr>
@@ -154,9 +253,293 @@
 
                 </table>
             </div>
+        </div>
+    </div>
+    </form>
+</div>
+
+
+<div class="modal fade" id="modalImportarJinetes" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form
+                method="post"
+                action="/jinetes/importar-excel"
+                enctype="multipart/form-data"
+            >
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        📤 Importar jinetes desde Excel
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                    ></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Archivo Excel
+                        </label>
+
+                        <input
+                            type="file"
+                            name="archivo"
+                            class="form-control"
+                            accept=".xlsx"
+                            required
+                        >
+
+                        <div class="form-text">
+                            Utilice el modelo Excel descargado desde el sistema.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Fecha
+                        </label>
+
+                        <select
+                            name="fecha_id"
+                            id="fechaImportacionJinetes"
+                            class="form-select"
+                            required
+                        >
+                            <option value="">
+                                Seleccionar fecha...
+                            </option>
+
+                            {% for fecha in fechas %}
+                            <option
+                                value="{{ fecha.id }}"
+                                data-campeonato="{{ fecha.campeonato_id }}"
+                            >
+                                {{ fecha.nombre }}
+                                {% if fecha.fecha %}
+                                - {{ fecha.fecha.strftime("%d/%m/%Y") }}
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Categoría
+                        </label>
+
+                        <select
+                            name="categoria_id"
+                            id="categoriaImportacionJinetes"
+                            class="form-select"
+                            required
+                            disabled
+                        >
+                            <option value="">
+                                Primero seleccione una fecha...
+                            </option>
+
+                            {% for categoria in categorias %}
+                            <option
+                                value="{{ categoria.id }}"
+                                data-campeonato="{{ categoria.campeonato_id }}"
+                            >
+                                {{ categoria.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="alert alert-light border mb-0">
+                        La categoría seleccionada queda fijada para ese jinete
+                        durante todo el campeonato. En las fechas siguientes
+                        conservará esa misma categoría.
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button type="submit" class="btn btn-primary">
+                        Importar jinetes
+                    </button>
+                </div>
+            </form>
 
         </div>
     </div>
-
 </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fechaImportacion = document.getElementById("fechaImportacionJinetes");
+    const categoriaImportacion = document.getElementById("categoriaImportacionJinetes");
+
+    const opcionesImportacion = Array.from(
+        categoriaImportacion.querySelectorAll("option[data-campeonato]")
+    );
+
+    function actualizarCategoriasImportacion() {
+        const opcionFecha =
+            fechaImportacion.options[fechaImportacion.selectedIndex];
+
+        const campeonatoId =
+            opcionFecha ? opcionFecha.dataset.campeonato : "";
+
+        categoriaImportacion.innerHTML = "";
+
+        const inicial = document.createElement("option");
+        inicial.value = "";
+        inicial.textContent = campeonatoId
+            ? "Seleccionar categoría..."
+            : "Primero seleccione una fecha...";
+
+        categoriaImportacion.appendChild(inicial);
+
+        if (!campeonatoId) {
+            categoriaImportacion.disabled = true;
+            return;
+        }
+
+        opcionesImportacion.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                categoriaImportacion.appendChild(
+                    opcion.cloneNode(true)
+                );
+            }
+        });
+
+        categoriaImportacion.disabled = false;
+    }
+
+    fechaImportacion.addEventListener(
+        "change",
+        actualizarCategoriasImportacion
+    );
+
+    actualizarCategoriasImportacion();
+
+
+    const fechaFiltro = document.getElementById("fechaFiltro");
+    const categoriaFiltro = document.getElementById("categoriaFiltro");
+
+    const opcionesFiltro = Array.from(
+        categoriaFiltro.querySelectorAll("option[data-campeonato]")
+    );
+
+    function actualizarCategoriasFiltro() {
+        const opcionFecha =
+            fechaFiltro.options[fechaFiltro.selectedIndex];
+
+        const campeonatoId =
+            opcionFecha ? opcionFecha.dataset.campeonato : "";
+
+        const valorActual = "{{ categoria_id }}";
+
+        categoriaFiltro.innerHTML = "";
+
+        const todas = document.createElement("option");
+        todas.value = "0";
+        todas.textContent = "Todas";
+        categoriaFiltro.appendChild(todas);
+
+        if (!campeonatoId) {
+            opcionesFiltro.forEach(function (opcion) {
+                const copia = opcion.cloneNode(true);
+                if (copia.value === valorActual) {
+                    copia.selected = true;
+                }
+                categoriaFiltro.appendChild(copia);
+            });
+            return;
+        }
+
+        opcionesFiltro.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                const copia = opcion.cloneNode(true);
+                if (copia.value === valorActual) {
+                    copia.selected = true;
+                }
+                categoriaFiltro.appendChild(copia);
+            }
+        });
+    }
+
+    fechaFiltro.addEventListener(
+        "change",
+        actualizarCategoriasFiltro
+    );
+
+
+    actualizarCategoriasFiltro();
+
+    const botonMasivo = document.querySelector('.btn-masivo[data-target="jinetes"]');
+    const barraMasiva = document.getElementById("barra-jinetes");
+    const formMasivo = document.getElementById("formMasivo-jinetes");
+    const columnasMasivas = formMasivo.querySelectorAll(".col-seleccion");
+    const itemsMasivos = Array.from(formMasivo.querySelectorAll(".item-masivo"));
+    const seleccionarTodos = formMasivo.querySelector(".seleccionar-todos");
+    const botonEliminar = formMasivo.querySelector(".eliminar-seleccionados");
+    const botonCancelar = document.querySelector('.cancelar-masivo[data-target="jinetes"]');
+
+    function actualizarMasivo() {
+        const cantidad = itemsMasivos.filter(x => x.checked).length;
+        botonEliminar.textContent = "Eliminar seleccionados (" + cantidad + ")";
+        botonEliminar.disabled = cantidad === 0;
+        seleccionarTodos.checked = cantidad > 0 && cantidad === itemsMasivos.length;
+        seleccionarTodos.indeterminate = cantidad > 0 && cantidad < itemsMasivos.length;
+    }
+
+    botonMasivo.addEventListener("click", function () {
+        columnasMasivas.forEach(x => x.classList.remove("d-none"));
+        barraMasiva.classList.remove("d-none");
+        botonMasivo.classList.add("d-none");
+    });
+
+    botonCancelar.addEventListener("click", function () {
+        columnasMasivas.forEach(x => x.classList.add("d-none"));
+        barraMasiva.classList.add("d-none");
+        botonMasivo.classList.remove("d-none");
+        itemsMasivos.forEach(x => x.checked = false);
+        seleccionarTodos.checked = false;
+        actualizarMasivo();
+    });
+
+    seleccionarTodos.addEventListener("change", function () {
+        itemsMasivos.forEach(x => x.checked = seleccionarTodos.checked);
+        actualizarMasivo();
+    });
+
+    itemsMasivos.forEach(x => x.addEventListener("change", actualizarMasivo));
+
+    formMasivo.addEventListener("submit", function (event) {
+        const cantidad = itemsMasivos.filter(x => x.checked).length;
+        if (
+            cantidad === 0 ||
+            !confirm(
+                "¿Querés eliminar definitivamente los " +
+                cantidad +
+                " jinetes seleccionados? Esta acción no se puede deshacer."
+            )
+        ) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
+
 {% endblock %}

@@ -202,9 +202,20 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2">
-            <a href="/caballos" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Guardar caballo</button>
+        <div class="d-flex justify-content-between align-items-center gap-2">
+            <div>
+                {% if caballo %}
+                <button type="submit" class="btn btn-outline-danger"
+                    formaction="/caballos/{{ caballo.id }}/eliminar" formmethod="post" formnovalidate
+                    onclick="return confirm('¿Eliminar definitivamente este caballo? Se borrarán su asignación vigente y todo su historial. Esta acción no se puede deshacer.');">
+                    Eliminar caballo
+                </button>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/caballos" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar caballo</button>
+            </div>
         </div>
 
     </form>

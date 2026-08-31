@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}DNI repetidos{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-1">DNI repetidos</h1>
+        <p class="text-muted mb-0">
+            La importación encontró DNI que ya existen con otro nombre o apellido.
+        </p>
+    </div>
+
+    <div class="alert alert-danger">
+        <strong>No se importaron {{ items|length }} fila(s).</strong>
+        El DNI ya está registrado a nombre de otra persona.
+        Revisá el Excel o el padrón antes de continuar.
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fila Excel</th>
+                            <th>DNI</th>
+                            <th>Nombre en Excel</th>
+                            <th>Nombre ya registrado</th>
+                            <th>Situación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.fila }}</td>
+                            <td><strong>{{ item.dni }}</strong></td>
+                            <td>
+                                {{ item.excel_apellidos }},
+                                {{ item.excel_nombres }}
+                            </td>
+                            <td>
+                                {{ item.base_apellidos }},
+                                {{ item.base_nombres }}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-danger">
+                                    DNI repetido
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if resumen %}
+    <div class="alert alert-light border">
+        Del resto del archivo:
+        nuevos <strong>{{ resumen.importados or 0 }}</strong>,
+        existentes <strong>{{ resumen.existentes or 0 }}</strong>,
+        incorporados a la fecha <strong>{{ resumen.avanzados or 0 }}</strong>,
+        ya estaban en la fecha <strong>{{ resumen.ya_en_fecha or 0 }}</strong>,
+        errores <strong>{{ resumen.errores or 0 }}</strong>.
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-end">
+        <form method="post" action="/jinetes/importar-dni-conflictos/continuar">
+            <button type="submit" class="btn btn-primary">
+                Entendido, continuar
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

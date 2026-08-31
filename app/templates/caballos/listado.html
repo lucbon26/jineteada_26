@@ -10,203 +10,88 @@
         </div>
 
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger btn-masivo" data-target="caballos">Eliminar masivo</button>
             <a href="/caballos/nuevo" class="btn btn-primary">Nuevo caballo</a>
             <a href="/caballos/modelo-excel" class="btn btn-outline-success">📥 Descargar modelo Excel</a>
-            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalImportarCaballos">
-                📤 Importar Excel
-            </button>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalImportarCaballos">📤 Importar Excel</button>
         </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="get" action="/caballos">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="buscar" class="form-label">Buscar</label>
-                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}" placeholder="Nombre, pelaje o tropilla">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="estado" class="form-label">Estado</label>
-                        <select class="form-select" id="estado" name="estado">
-                            <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
-                            <option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option>
-                            <option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivos</option>
-                            <option value="lesionado" {% if estado == "lesionado" %}selected{% endif %}>Lesionados</option>
-                            <option value="retirado" {% if estado == "retirado" %}selected{% endif %}>Retirados</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="fechaFiltro" class="form-label">Fecha</label>
-                        <select class="form-select" id="fechaFiltro" name="fecha_id">
-                            <option value="0">Todas</option>
-                            <option value="-1" {% if fecha_id == -1 %}selected{% endif %}>Sin asignación</option>
-                            {% for fecha in fechas %}
-                            <option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}" {% if fecha_id == fecha.id %}selected{% endif %}>
-                                {{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label for="categoriaFiltro" class="form-label">Categoría</label>
-                        <select class="form-select" id="categoriaFiltro" name="categoria_id">
-                            <option value="0">Todas</option>
-                            {% for categoria in categorias %}
-                            <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}" {% if categoria_id == categoria.id %}selected{% endif %}>
-                                {{ categoria.nombre }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {% if importados or existentes or ya_asignados or reasignados_auto or errores_importacion %}
-    <div class="alert alert-success">
-        <strong>Importación finalizada.</strong>
-        <div class="mt-2">
-            Caballos nuevos: <strong>{{ importados or 0 }}</strong>
-            · Ya existentes: <strong>{{ existentes or 0 }}</strong>
-            · Ya estaban asignados: <strong>{{ ya_asignados or 0 }}</strong>
-            · Reasignados: <strong>{{ reasignados_auto or 0 }}</strong>
-            · Errores: <strong>{{ errores_importacion or 0 }}</strong>
-        </div>
-    </div>
+    {% if request.query_params.get("eliminados") %}
+    <div class="alert alert-success">Se eliminaron <strong>{{ request.query_params.get("eliminados") }}</strong> caballos.</div>
     {% endif %}
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Tropilla</th>
-                            <th>Pelaje</th>
-                            <th>Asignación vigente</th>
-                            <th>Estado</th>
-                            <th class="text-end">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for caballo in caballos %}
-                        {% set asignacion = asignacion_por_caballo.get(caballo.id) %}
-                        <tr>
-                            <td><strong>{{ caballo.nombre }}</strong></td>
-                            <td>{{ caballo.tropilla.nombre if caballo.tropilla else "-" }}</td>
-                            <td>{{ caballo.pelaje or "-" }}</td>
-                            <td>
-                                {% if asignacion %}
-                                {{ asignacion.fecha.nombre }} · <strong>{{ asignacion.categoria.nombre }}</strong>
-                                {% else %}
-                                <span class="text-muted">Sin asignación</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if caballo.estado == "activo" %}<span class="badge text-bg-success">Activo</span>{% endif %}
-                                {% if caballo.estado == "inactivo" %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
-                                {% if caballo.estado == "lesionado" %}<span class="badge text-bg-warning">Lesionado</span>{% endif %}
-                                {% if caballo.estado == "retirado" %}<span class="badge text-bg-danger">Retirado</span>{% endif %}
-                            </td>
-                            <td class="text-end">
-                                <a href="/caballos/{{ caballo.id }}/editar" class="btn btn-sm btn-outline-primary">Editar</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6" class="text-center text-muted py-5">No hay caballos registrados.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="card shadow-sm mb-4"><div class="card-body">
+        <form method="get" action="/caballos"><div class="row g-3">
+            <div class="col-md-4"><label for="buscar" class="form-label">Buscar</label><input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}" placeholder="Nombre, pelaje o tropilla"></div>
+            <div class="col-md-2"><label for="estado" class="form-label">Estado</label><select class="form-select" id="estado" name="estado">
+                <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option><option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option><option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivos</option><option value="lesionado" {% if estado == "lesionado" %}selected{% endif %}>Lesionados</option><option value="retirado" {% if estado == "retirado" %}selected{% endif %}>Retirados</option>
+            </select></div>
+            <div class="col-md-2"><label for="fechaFiltro" class="form-label">Fecha</label><select class="form-select" id="fechaFiltro" name="fecha_id">
+                <option value="0">Todas</option><option value="-1" {% if fecha_id == -1 %}selected{% endif %}>Sin asignación</option>
+                {% for fecha in fechas %}<option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}" {% if fecha_id == fecha.id %}selected{% endif %}>{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>{% endfor %}
+            </select></div>
+            <div class="col-md-2"><label for="categoriaFiltro" class="form-label">Categoría</label><select class="form-select" id="categoriaFiltro" name="categoria_id">
+                <option value="0">Todas</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}" {% if categoria_id == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>{% endfor %}
+            </select></div>
+            <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-outline-primary w-100">Buscar</button></div>
+        </div></form>
+    </div></div>
+
+    {% if importados or existentes or ya_asignados or reasignados_auto or errores_importacion %}
+    <div class="alert alert-success"><strong>Importación finalizada.</strong><div class="mt-2">Caballos nuevos: <strong>{{ importados or 0 }}</strong> · Ya existentes: <strong>{{ existentes or 0 }}</strong> · Ya estaban asignados: <strong>{{ ya_asignados or 0 }}</strong> · Reasignados: <strong>{{ reasignados_auto or 0 }}</strong> · Errores: <strong>{{ errores_importacion or 0 }}</strong></div></div>
+    {% endif %}
+
+    <form method="post" action="/caballos/eliminar-masivo" id="formMasivo-caballos">
+    <div class="d-none mb-3 barra-masiva" id="barra-caballos">
+        <button type="button" class="btn btn-outline-secondary cancelar-masivo" data-target="caballos">Cancelar</button>
+        <button type="submit" class="btn btn-danger eliminar-seleccionados" data-target="caballos" disabled>Eliminar seleccionados (0)</button>
     </div>
+    <div class="card shadow-sm"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr>
+            <th class="col-seleccion d-none" style="width:45px"><input type="checkbox" class="form-check-input seleccionar-todos" data-target="caballos"></th>
+            <th>Nombre</th><th>Tropilla</th><th>Pelaje</th><th>Asignación vigente</th><th>Estado</th><th class="text-end">Acciones</th>
+        </tr></thead>
+        <tbody>
+        {% for caballo in caballos %}{% set asignacion = asignacion_por_caballo.get(caballo.id) %}
+        <tr>
+            <td class="col-seleccion d-none"><input type="checkbox" class="form-check-input item-masivo" data-target="caballos" name="seleccionados" value="{{ caballo.id }}"></td>
+            <td><strong>{{ caballo.nombre }}</strong></td><td>{{ caballo.tropilla.nombre if caballo.tropilla else "-" }}</td><td>{{ caballo.pelaje or "-" }}</td>
+            <td>{% if asignacion %}{{ asignacion.fecha.nombre }} · <strong>{{ asignacion.categoria.nombre }}</strong>{% else %}<span class="text-muted">Sin asignación</span>{% endif %}</td>
+            <td>{% if caballo.estado == "activo" %}<span class="badge text-bg-success">Activo</span>{% endif %}{% if caballo.estado == "inactivo" %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}{% if caballo.estado == "lesionado" %}<span class="badge text-bg-warning">Lesionado</span>{% endif %}{% if caballo.estado == "retirado" %}<span class="badge text-bg-danger">Retirado</span>{% endif %}</td>
+            <td class="text-end"><a href="/caballos/{{ caballo.id }}/editar" class="btn btn-sm btn-outline-primary">Editar</a></td>
+        </tr>
+        {% else %}<tr><td colspan="7" class="text-center text-muted py-5">No hay caballos registrados.</td></tr>{% endfor %}
+        </tbody>
+    </table></div></div></div>
+    </form>
 </div>
 
-<div class="modal fade" id="modalImportarCaballos" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" action="/caballos/importar-excel" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title">📤 Importar caballos desde Excel</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Archivo Excel</label>
-                        <input type="file" name="archivo" class="form-control" accept=".xlsx" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Fecha</label>
-                        <select name="fecha_id" id="fechaImportacion" class="form-select" required>
-                            <option value="">Seleccionar fecha...</option>
-                            {% for fecha in fechas %}
-                            <option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}">
-                                {{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Categoría</label>
-                        <select name="categoria_id" id="categoriaImportacion" class="form-select" required disabled>
-                            <option value="">Primero seleccione una fecha...</option>
-                            {% for categoria in categorias %}
-                            <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Importar caballos</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="modalImportarCaballos" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+<form method="post" action="/caballos/importar-excel" enctype="multipart/form-data">
+<div class="modal-header"><h5 class="modal-title">📤 Importar caballos desde Excel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-3"><label class="form-label">Archivo Excel</label><input type="file" name="archivo" class="form-control" accept=".xlsx" required></div>
+<div class="mb-3"><label class="form-label">Fecha</label><select name="fecha_id" id="fechaImportacion" class="form-select" required><option value="">Seleccionar fecha...</option>{% for fecha in fechas %}<option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}">{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>{% endfor %}</select></div>
+<div class="mb-3"><label class="form-label">Categoría</label><select name="categoria_id" id="categoriaImportacion" class="form-select" required disabled><option value="">Primero seleccione una fecha...</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></div>
+</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Importar caballos</button></div>
+</form></div></div></div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const fechaImportacion = document.getElementById("fechaImportacion");
-    const categoriaImportacion = document.getElementById("categoriaImportacion");
-    const opciones = Array.from(categoriaImportacion.querySelectorAll("option[data-campeonato]"));
-
-    fechaImportacion.addEventListener("change", function () {
-        const opcionFecha = fechaImportacion.options[fechaImportacion.selectedIndex];
-        const campeonatoId = opcionFecha.dataset.campeonato;
-        categoriaImportacion.innerHTML = "";
-
-        const inicial = document.createElement("option");
-        inicial.value = "";
-        inicial.textContent = "Seleccionar categoría...";
-        categoriaImportacion.appendChild(inicial);
-
-        if (!campeonatoId) {
-            categoriaImportacion.disabled = true;
-            return;
-        }
-
-        opciones.forEach(function (opcion) {
-            if (opcion.dataset.campeonato === campeonatoId) {
-                categoriaImportacion.appendChild(opcion.cloneNode(true));
-            }
-        });
-
-        categoriaImportacion.disabled = false;
-    });
+ const fechaImportacion=document.getElementById("fechaImportacion"), categoriaImportacion=document.getElementById("categoriaImportacion");
+ const opciones=Array.from(categoriaImportacion.querySelectorAll("option[data-campeonato]"));
+ fechaImportacion.addEventListener("change",function(){const o=fechaImportacion.options[fechaImportacion.selectedIndex],cid=o.dataset.campeonato; categoriaImportacion.innerHTML='<option value="">Seleccionar categoría...</option>'; if(!cid){categoriaImportacion.disabled=true;return;} opciones.forEach(x=>{if(x.dataset.campeonato===cid)categoriaImportacion.appendChild(x.cloneNode(true));}); categoriaImportacion.disabled=false;});
+ configurarMasivo("caballos");
 });
+function configurarMasivo(target){
+ const boton=document.querySelector('.btn-masivo[data-target="'+target+'"]'), barra=document.getElementById("barra-"+target), form=document.getElementById("formMasivo-"+target);
+ const cols=form.querySelectorAll(".col-seleccion"), items=Array.from(form.querySelectorAll(".item-masivo")), todos=form.querySelector(".seleccionar-todos"), eliminar=form.querySelector(".eliminar-seleccionados"), cancelar=document.querySelector('.cancelar-masivo[data-target="'+target+'"]');
+ function actualizar(){const n=items.filter(x=>x.checked).length; eliminar.textContent="Eliminar seleccionados ("+n+")"; eliminar.disabled=n===0; todos.checked=n>0&&n===items.length; todos.indeterminate=n>0&&n<items.length;}
+ function salir(){cols.forEach(x=>x.classList.add("d-none")); barra.classList.add("d-none"); boton.classList.remove("d-none"); items.forEach(x=>x.checked=false); todos.checked=false; actualizar();}
+ boton.addEventListener("click",()=>{cols.forEach(x=>x.classList.remove("d-none"));barra.classList.remove("d-none");boton.classList.add("d-none");});
+ cancelar.addEventListener("click",salir); todos.addEventListener("change",()=>{items.forEach(x=>x.checked=todos.checked);actualizar();}); items.forEach(x=>x.addEventListener("change",actualizar));
+ form.addEventListener("submit",e=>{const n=items.filter(x=>x.checked).length;if(!n||!confirm("¿Querés eliminar definitivamente los "+n+" caballos seleccionados? Esta acción no se puede deshacer."))e.preventDefault();});
+}
 </script>
-
 {% endblock %}
