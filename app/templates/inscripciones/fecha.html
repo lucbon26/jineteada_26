@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Inscripciones - {{ fecha_evento.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <a href="/inscripciones" class="text-decoration-none">← Inscripciones</a>
+            <h1 class="h3 mb-1 mt-2">{{ fecha_evento.nombre }}</h1>
+            <div class="text-muted">{{ fecha_evento.fecha.strftime('%d/%m/%Y') }} · {{ fecha_evento.localidad }}</div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if not fecha_evento.inscripcion_cerrada %}<a href="/acreditacion?fecha_id={{ fecha_evento.id }}" class="btn btn-success">📱 Acreditar con celular</a>{% endif %}<a href="/inscripciones/qr" class="btn btn-outline-primary">Credenciales QR</a>
+            {% if fecha_evento.inscripcion_cerrada %}
+            <form method="post" action="/inscripciones/fecha/{{ fecha_evento.id }}/reabrir"
+                  onsubmit="return confirm('¿Desea reabrir la inscripción? Las sanciones ya aplicadas no se revierten automáticamente.');">
+                <button class="btn btn-outline-warning" type="submit">Reabrir inscripción</button>
+            </form>
+            {% else %}
+            <form method="post" action="/inscripciones/fecha/{{ fecha_evento.id }}/cerrar"
+                  onsubmit="return confirm('Hay {{ resumen.pendiente }} jinete(s) pendiente(s). Al cerrar, los pendientes activos serán marcados ausentes y se aplicarán las reglas de faltas/suspensión. ¿Desea continuar?');">
+                <button class="btn btn-danger" type="submit">Cerrar inscripción</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if mensaje %}
+    <div class="alert alert-{{ tipo }}">{{ mensaje }}</div>
+    {% endif %}
+
+    {% if fecha_evento.inscripcion_cerrada %}
+    <div class="alert alert-dark">
+        <strong>Inscripción cerrada.</strong>
+        Sólo los jinetes con estado <strong>Validado</strong> quedan habilitados para el sorteo.
+        {% if fecha_evento.inscripcion_cerrada_en %}
+        Cierre: {{ fecha_evento.inscripcion_cerrada_en.strftime('%d/%m/%Y %H:%M') }}.
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body"><div class="small text-muted">Total</div><div class="h4 mb-0">{{ resumen.total }}</div></div></div></div>
+        <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body"><div class="small text-muted">Pendientes</div><div class="h4 mb-0">{{ resumen.pendiente }}</div></div></div></div>
+        <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body"><div class="small text-muted">Validados</div><div class="h4 mb-0">{{ resumen.validado }}</div></div></div></div>
+        <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body"><div class="small text-muted">Ausentes</div><div class="h4 mb-0">{{ resumen.ausente }}</div></div></div></div>
+        <div class="col-6 col-md"><div class="card shadow-sm"><div class="card-body"><div class="small text-muted">No habilitados</div><div class="h4 mb-0">{{ resumen.no_habilitado }}</div></div></div></div>
+    </div>
+
+    {% if not fecha_evento.inscripcion_cerrada %}
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-body">
+            <h5 class="card-title">Validar QR</h5>
+            <p class="text-muted small">El lector QR debe ingresar el código del jinete. El campo vuelve a quedar listo para el siguiente.</p>
+            <form method="post" action="/inscripciones/fecha/{{ fecha_evento.id }}/validar-qr" class="row g-2" id="formQr">
+                <div class="col-md-8">
+                    <input type="text" name="codigo" id="codigoQr" class="form-control form-control-lg" autocomplete="off" autofocus required placeholder="Escanear QR del jinete...">
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-lg">Validar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="buscar" value="{{ buscar }}" class="form-control" placeholder="Apellido, nombre, DNI o localidad">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Categoría</label>
+                    <select name="categoria_id" class="form-select">
+                        <option value="0">Todas</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}" {% if categoria_id == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select">
+                        <option value="todos" {% if estado_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                        <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="validado" {% if estado_filtro == 'validado' %}selected{% endif %}>Validado</option>
+                        <option value="ausente" {% if estado_filtro == 'ausente' %}selected{% endif %}>Ausente</option>
+                        <option value="no_habilitado" {% if estado_filtro == 'no_habilitado' %}selected{% endif %}>No habilitado</option>
+                    </select>
+                </div>
+                <div class="col-md-auto"><button class="btn btn-outline-primary" type="submit">Buscar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Jinete</th>
+                            <th>DNI</th>
+                            <th>Categoría</th>
+                            <th>Estado jinete</th>
+                            <th>Inscripción</th>
+                            <th>Validación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inscripcion in inscripciones %}
+                        <tr>
+                            <td><strong>{{ inscripcion.jinete.apellidos }}, {{ inscripcion.jinete.nombres }}</strong></td>
+                            <td>{{ inscripcion.jinete.dni }}</td>
+                            <td>{{ inscripcion.categoria.nombre }}</td>
+                            <td>
+                                {% if inscripcion.jinete.estado == 'activo' %}<span class="badge text-bg-success">Activo</span>{% endif %}
+                                {% if inscripcion.jinete.estado == 'inactivo' %}<span class="badge text-bg-secondary">Inactivo</span>{% endif %}
+                                {% if inscripcion.jinete.estado == 'suspendido' %}<span class="badge text-bg-warning">Suspendido</span>{% endif %}
+                                {% if inscripcion.jinete.estado == 'descalificado' %}<span class="badge text-bg-danger">Descalificado</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if inscripcion.estado == 'pendiente' %}<span class="badge text-bg-warning">Pendiente QR</span>{% endif %}
+                                {% if inscripcion.estado == 'validado' %}<span class="badge text-bg-success">Validado</span>{% endif %}
+                                {% if inscripcion.estado == 'ausente' %}<span class="badge text-bg-secondary">Ausente</span>{% endif %}
+                                {% if inscripcion.estado == 'no_habilitado' %}<span class="badge text-bg-danger">No habilitado</span>{% endif %}
+                                {% if inscripcion.motivo_no_habilitado %}<div class="small text-muted mt-1">{{ inscripcion.motivo_no_habilitado }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {% if inscripcion.validado_en %}
+                                {{ inscripcion.validado_en.strftime('%H:%M') }}
+                                <div class="small text-muted">{{ inscripcion.validado_por or '' }}</div>
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-5">No hay inscripciones para esta fecha.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const qrInput = document.getElementById('codigoQr');
+if (qrInput) {
+    window.addEventListener('load', () => qrInput.focus());
+}
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+MÓDULO 7 — INSCRIPCIONES + QR + ACREDITACIÓN MÓVIL
+===================================================
+
+Este ZIP reemplaza al paquete anterior. No instales el anterior primero.
+
+Incluye:
+- Inscripciones por fecha.
+- Estados pendiente / validado / ausente / no_habilitado.
+- QR único permanente por jinete.
+- Cierre de inscripción con confirmación.
+- Pendiente activo -> ausente al cierre.
+- 2 ausencias -> descalificado.
+- 2 fechas suspendido -> descalificado.
+- Inactivo conserva su estado.
+- Sólo Validado queda habilitado para Sorteo.
+- Reapertura administrativa si todavía no se sorteó.
+- /acreditacion optimizado para celular.
+- Cámara trasera + lectura QR cuando BarcodeDetector está disponible.
+- Validación manual como respaldo.
+- Rol Acreditación limitado exclusivamente a /acreditacion.
+- Administrador y Secretaría también pueden acreditar.
+
+INSTALACIÓN
+-----------
+1) Extraer sobre C:\jineteada_26
+2) Ejecutar:
+   python instalar_modulo7.py
+   pip install -r requirements.txt
+   alembic upgrade head
+   uvicorn app.main:app --reload --host 0.0.0.0
+
+PC:
+http://127.0.0.1:8000/inscripciones
+
+CELULAR (misma red):
+http://IP-DE-LA-PC:8000/acreditacion
+
+NOTA DE CÁMARA
+--------------
+Algunos navegadores exigen HTTPS para habilitar getUserMedia cuando se entra por IP.
+Si el navegador bloquea la cámara por HTTP, podés probar toda la lógica con el campo manual.
+En producción conviene servir la app por HTTPS.

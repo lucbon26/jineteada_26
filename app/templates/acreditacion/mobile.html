@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Acreditación QR</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#1b1d22;--panel2:#24272e;--text:#f5f7fb;--muted:#aeb5c2;--ok:#1f9d55;--warn:#d69e2e;--bad:#d64545;--accent:#6f5bd3}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+.app{width:min(680px,100%);margin:0 auto;padding:14px 14px 32px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{font-size:1.35rem;margin:0}.muted{color:var(--muted);font-size:.92rem}.card{background:var(--panel);border:1px solid #30333a;border-radius:18px;padding:14px;margin-bottom:14px}
+select,input,button,a.btn{width:100%;min-height:52px;border-radius:14px;border:1px solid #3b3f49;font-size:1rem}
+select,input{background:#15171b;color:var(--text);padding:0 14px}button,a.btn{cursor:pointer;font-weight:700;padding:0 16px;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.primary{background:var(--accent);color:white;border:none}.secondary{background:var(--panel2);color:white}.logout{width:auto!important;min-height:40px!important;padding:0 12px!important;font-size:.9rem!important}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.stat{background:var(--panel2);border-radius:12px;padding:10px 6px;text-align:center}.stat strong{display:block;font-size:1.3rem}
+.scanner{overflow:hidden;position:relative;border-radius:18px;background:#000;min-height:300px}video{width:100%;height:360px;object-fit:cover;display:block}
+.frame{pointer-events:none;position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:68%;aspect-ratio:1;border:3px solid white;border-radius:20px;box-shadow:0 0 0 2000px rgba(0,0,0,.22)}
+.row{display:flex;gap:8px;margin-top:10px}.row>*{flex:1}.result{display:none;border-radius:18px;padding:18px;margin-bottom:14px;text-align:center}.result.ok{display:block;background:#123b26;border:2px solid var(--ok)}
+.result.warn{display:block;background:#443311;border:2px solid var(--warn)}.result.bad{display:block;background:#431a1a;border:2px solid var(--bad)}.result h2{margin:0 0 6px;font-size:1.55rem}
+.result .name{font-size:1.25rem;font-weight:800;margin-top:10px}.closed{background:#431a1a;border:1px solid var(--bad);border-radius:14px;padding:12px;font-weight:700}.manual{margin-top:12px}.manual label{display:block;margin-bottom:6px;color:var(--muted);font-size:.9rem}
+@media(max-width:480px){.app{padding:10px 10px 28px}video{height:330px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+<div class="app">
+<div class="top"><div><h1>📱 Acreditación QR</h1><div class="muted">{{ usuario_nombre }}</div></div><a class="btn secondary logout" href="/logout">Salir</a></div>
+
+<div class="card">
+<form method="get" action="/acreditacion">
+<label class="muted" for="fecha_id">Fecha a acreditar</label>
+<select id="fecha_id" name="fecha_id" onchange="this.form.submit()">
+<option value="">Seleccionar fecha...</option>
+{% for fecha in fechas %}
+<option value="{{ fecha.id }}" {% if fecha_evento and fecha_evento.id == fecha.id %}selected{% endif %}>{{ fecha.fecha.strftime('%d/%m/%Y') }} · {{ fecha.nombre }}{% if fecha.inscripcion_cerrada %} · CERRADA{% endif %}</option>
+{% endfor %}
+</select>
+</form>
+{% if fecha_evento %}
+<div class="stats">
+<div class="stat"><strong id="statPendiente">{{ resumen.pendiente }}</strong><span class="muted">Pendientes</span></div>
+<div class="stat"><strong id="statValidado">{{ resumen.validado }}</strong><span class="muted">Validados</span></div>
+<div class="stat"><strong>{{ resumen.total }}</strong><span class="muted">Total</span></div>
+</div>
+{% endif %}
+</div>
+
+{% if fecha_evento %}
+{% if fecha_evento.inscripcion_cerrada %}
+<div class="closed">🔒 La inscripción de esta fecha está cerrada.</div>
+{% else %}
+<div id="resultado" class="result">
+<h2 id="resultadoTitulo"></h2>
+<div id="resultadoNombre" class="name"></div>
+<div id="resultadoCategoria"></div>
+<div id="resultadoMensaje" class="muted"></div>
+</div>
+
+<div class="card">
+<div id="compatibilidad" class="muted" style="margin-bottom:10px">Preparando cámara…</div>
+<div class="scanner"><video id="video" playsinline muted></video><canvas id="qrCanvas" style="display:none"></canvas><div class="frame"></div></div>
+<div class="row">
+<button type="button" class="primary" id="btnCamara">Iniciar cámara</button>
+<button type="button" class="secondary" id="btnCambiar">Cambiar cámara</button>
+</div>
+<div class="manual">
+<label for="codigoManual">Código manual / lector externo</label>
+<div class="row"><input id="codigoManual" autocomplete="off" placeholder="JINETE:..."><button type="button" class="primary" id="btnManual">Validar</button></div>
+</div>
+</div>
+{% endif %}
+{% else %}
+<div class="card">Seleccioná la fecha que vas a acreditar.</div>
+{% endif %}
+</div>
+
+{% if fecha_evento and not fecha_evento.inscripcion_cerrada %}
+<script>
+const fechaId={{ fecha_evento.id }};
+const video=document.getElementById('video');
+const canvas=document.getElementById('qrCanvas');
+const ctx=canvas.getContext('2d',{willReadFrequently:true});
+const compatibilidad=document.getElementById('compatibilidad');
+const resultado=document.getElementById('resultado');
+const titulo=document.getElementById('resultadoTitulo');
+const nombre=document.getElementById('resultadoNombre');
+const categoria=document.getElementById('resultadoCategoria');
+const mensaje=document.getElementById('resultadoMensaje');
+const pendiente=document.getElementById('statPendiente');
+const validado=document.getElementById('statValidado');
+let stream=null,escaneando=false,bloqueado=false,facingMode='environment';
+
+function mostrarResultado(data){
+ resultado.className='result';
+ resultado.classList.add(data.ok?'ok':(data.codigo==='ya_validado'?'warn':'bad'));
+ titulo.textContent=data.titulo||'';
+ nombre.textContent=data.jinete||'';
+ categoria.textContent=data.categoria||'';
+ mensaje.textContent=data.mensaje||'';
+ if(data.ok&&pendiente&&validado){
+   pendiente.textContent=Math.max(0,Number(pendiente.textContent)-1);
+   validado.textContent=Number(validado.textContent)+1;
+ }
+ if(navigator.vibrate)navigator.vibrate(data.ok?100:[100,60,100]);
+}
+async function validarCodigo(codigo){
+ if(!codigo||bloqueado)return;
+ bloqueado=true;
+ try{
+  const form=new FormData();form.append('fecha_id',fechaId);form.append('codigo',codigo);
+  const resp=await fetch('/acreditacion/validar',{method:'POST',body:form,credentials:'same-origin'});
+  const data=await resp.json();mostrarResultado(data);
+ }catch(e){mostrarResultado({ok:false,codigo:'red',titulo:'ERROR',mensaje:'No se pudo comunicar con el servidor.'});}
+ setTimeout(()=>{bloqueado=false},1600);
+}
+function ciclo(){
+ if(!escaneando)return;
+ if(video.readyState>=2 && video.videoWidth && video.videoHeight && typeof jsQR==='function'){
+   canvas.width=video.videoWidth;
+   canvas.height=video.videoHeight;
+   ctx.drawImage(video,0,0,canvas.width,canvas.height);
+   const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+   const code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+   if(code && code.data && !bloqueado) validarCodigo(code.data);
+ }
+ if(escaneando)requestAnimationFrame(ciclo);
+}
+async function detener(){
+ escaneando=false;
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ video.srcObject=null;
+}
+async function iniciar(){
+ await detener();
+ if(!window.isSecureContext && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
+   compatibilidad.textContent='La cámara requiere HTTPS cuando entrás desde otro dispositivo.';
+   return;
+ }
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+   compatibilidad.textContent='Este navegador no permite usar la cámara. Usá el campo manual.';
+   return;
+ }
+ if(typeof jsQR!=='function'){
+   compatibilidad.textContent='No se pudo cargar el lector QR. Revisá la conexión o instalá el lector local.';
+   return;
+ }
+ try{
+   stream=await navigator.mediaDevices.getUserMedia({
+     video:{facingMode:{ideal:facingMode}},
+     audio:false
+   });
+   video.srcObject=stream;
+   await video.play();
+   escaneando=true;
+   compatibilidad.textContent='Apuntá al QR del jinete.';
+   requestAnimationFrame(ciclo);
+ }catch(e){
+   compatibilidad.textContent='No pude abrir la cámara: '+(e.name||'error')+'. Revisá el permiso del navegador.';
+ }
+}
+document.getElementById('btnCamara').addEventListener('click',iniciar);
+document.getElementById('btnCambiar').addEventListener('click',async()=>{facingMode=facingMode==='environment'?'user':'environment';await iniciar()});
+document.getElementById('btnManual').addEventListener('click',()=>{const c=document.getElementById('codigoManual');validarCodigo(c.value.trim());c.value='';c.focus()});
+document.getElementById('codigoManual').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('btnManual').click()}});
+window.addEventListener('beforeunload',detener);
+compatibilidad.textContent='Lector QR listo. Tocá “Iniciar cámara”.';
+</script>
+{% endif %}
+</body>
+</html>

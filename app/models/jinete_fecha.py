@@ -1,7 +1,6 @@
-
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -30,6 +29,34 @@ class JineteFecha(Base):
         index=True,
     )
 
+    # pendiente | validado | ausente | no_habilitado
+    estado: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="pendiente",
+        index=True,
+    )
+
+    motivo_no_habilitado: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    validado_en: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
+    validado_por: Mapped[str | None] = mapped_column(
+        String(120),
+        nullable=True,
+    )
+
+    observaciones: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     creado_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -47,3 +74,7 @@ class JineteFecha(Base):
     jinete = relationship("Jinete", back_populates="participaciones")
     fecha = relationship("Fecha")
     categoria = relationship("Categoria")
+
+    @property
+    def habilitado_sorteo(self) -> bool:
+        return self.estado == "validado"

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Inscripciones{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Inscripciones</h1>
+            <p class="text-muted mb-0">Preparación por fecha y validación previa al sorteo.</p>
+        </div>
+        <div class="d-flex gap-2"><a href="/acreditacion" class="btn btn-success">📱 Acreditar con celular</a><a href="/inscripciones/qr" class="btn btn-outline-primary">QR de jinetes</a></div>
+    </div>
+
+    {% if request.query_params.get('generadas') %}
+    <div class="alert alert-success">
+        Se generaron {{ request.query_params.get('generadas') }} inscripción(es)
+        en {{ request.query_params.get('fechas') }} fecha(s).
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Campeonato</label>
+                    <select name="campeonato_id" class="form-select">
+                        <option value="0">Todos</option>
+                        {% for campeonato in campeonatos %}
+                        <option value="{{ campeonato.id }}" {% if campeonato_id == campeonato.id %}selected{% endif %}>
+                            {{ campeonato.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" type="submit">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <form method="post" action="/inscripciones/generar">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <strong>Fechas</strong>
+                    <div class="small text-muted">Podés seleccionar una o varias fechas para preparar las inscripciones.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Generar seleccionadas</button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 44px;"><input type="checkbox" id="seleccionarTodas"></th>
+                                <th>Fecha</th>
+                                <th>Estado inscripción</th>
+                                <th>Pendientes</th>
+                                <th>Validados</th>
+                                <th>Ausentes</th>
+                                <th>No habilitados</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fecha in fechas %}
+                            {% set r = resumen_fechas.get(fecha.id, {}) %}
+                            <tr>
+                                <td>
+                                    {% if not fecha.inscripcion_cerrada %}
+                                    <input type="checkbox" class="fecha-check" name="fecha_ids" value="{{ fecha.id }}">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ fecha.nombre }}</strong>
+                                    <div class="small text-muted">{{ fecha.fecha.strftime('%d/%m/%Y') }}</div>
+                                </td>
+                                <td>
+                                    {% if fecha.inscripcion_cerrada %}
+                                    <span class="badge text-bg-dark">Cerrada</span>
+                                    {% else %}
+                                    <span class="badge text-bg-success">Abierta</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.get('pendiente', 0) }}</td>
+                                <td>{{ r.get('validado', 0) }}</td>
+                                <td>{{ r.get('ausente', 0) }}</td>
+                                <td>{{ r.get('no_habilitado', 0) }}</td>
+                                <td class="text-end">
+                                    <a href="/inscripciones/fecha/{{ fecha.id }}" class="btn btn-sm btn-outline-primary">Abrir</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="8" class="text-center text-muted py-5">No hay fechas para mostrar.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const checkAll = document.getElementById('seleccionarTodas');
+if (checkAll) {
+    checkAll.addEventListener('change', function () {
+        document.querySelectorAll('.fecha-check').forEach(cb => cb.checked = this.checked);
+    });
+}
+</script>
+{% endblock %}

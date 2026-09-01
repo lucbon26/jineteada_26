@@ -30,12 +30,21 @@ class Fecha(Base):
         default="programada",
     )
 
-    # El módulo Sorteos debe pasar este valor a True
-    # cuando la fecha quede efectivamente sorteada.
     sorteada: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
+    )
+
+    inscripcion_cerrada: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    inscripcion_cerrada_en: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
     )
 
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)

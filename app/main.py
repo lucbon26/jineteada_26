@@ -22,6 +22,7 @@ app = FastAPI(
     version=settings.APP_VERSION
 )
 
+
 app.add_middleware(
     SessionMiddleware,
     secret_key="cambiar-esta-clave-en-produccion"
@@ -80,3 +81,10 @@ def dashboard(request: Request):
             ),
         },
     )
+# MODULO7_INSCRIPCIONES
+from app.routers import inscripciones as inscripciones_router
+app.include_router(inscripciones_router.router)
+
+# MODULO7_ACREDITACION
+from app.routers import acreditacion as acreditacion_router
+app.include_router(acreditacion_router.router)

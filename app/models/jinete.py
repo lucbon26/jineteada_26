@@ -1,10 +1,14 @@
-
 from datetime import date, datetime
+import secrets
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, Text
+from sqlalchemy import Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+
+def generar_qr_token() -> str:
+    return secrets.token_urlsafe(24)
 
 
 class Jinete(Base):
@@ -15,6 +19,14 @@ class Jinete(Base):
     nombres: Mapped[str] = mapped_column(String(100), nullable=False)
     apellidos: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     dni: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+
+    qr_token: Mapped[str] = mapped_column(
+        String(80),
+        nullable=False,
+        unique=True,
+        index=True,
+        default=generar_qr_token,
+    )
 
     fecha_nacimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
     sexo: Mapped[str | None] = mapped_column(String(30), nullable=True)

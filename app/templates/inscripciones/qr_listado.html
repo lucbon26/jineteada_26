@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}QR de jinetes{% endblock %}
+{% block contenido %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="/inscripciones" class="text-decoration-none">← Inscripciones</a>
+            <h1 class="h3 mb-1 mt-2">Credenciales QR</h1>
+            <p class="text-muted mb-0">Cada jinete tiene un QR único y permanente.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-6"><input name="buscar" value="{{ buscar }}" class="form-control" placeholder="Apellido, nombre o DNI"></div>
+                <div class="col-md-auto"><button class="btn btn-primary">Buscar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>Jinete</th><th>DNI</th><th>Estado</th><th class="text-end">QR</th></tr></thead>
+                    <tbody>
+                        {% for jinete in jinetes %}
+                        <tr>
+                            <td><strong>{{ jinete.apellidos }}, {{ jinete.nombres }}</strong></td>
+                            <td>{{ jinete.dni }}</td>
+                            <td>{{ jinete.estado|capitalize }}</td>
+                            <td class="text-end"><a href="/inscripciones/qr/{{ jinete.id }}" class="btn btn-sm btn-outline-primary">Ver / imprimir</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-5">No hay jinetes.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
