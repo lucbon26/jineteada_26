@@ -23,15 +23,15 @@ del campeonato hasta los resultados finales.
 -   ✅ Jinetes
 -   ✅ Caballos
 -   ✅ Tropillas
+-   ✅ Inscripciones
+-   ✅ QR y acreditación
+-   ✅ Sorteos
 
-### Próximos módulos
+### Módulos pendientes
 
--   📝 Inscripciones
--   🎲 Sorteo
 -   🏆 Resultados
--   📄 Reportes PDF
 -   📊 Estadísticas
--   📝 Auditoría
+-   📝 Auditoría completa
 
 ------------------------------------------------------------------------
 
@@ -63,12 +63,23 @@ del campeonato hasta los resultados finales.
 -   📚 Historial de participaciones, reasignaciones y cambios de estado
 -   👥 Usuarios con autenticación
 
+## También disponibles
+
+-   📝 Gestión de inscripciones por fecha y categoría
+-   📱 Acreditación mediante QR único por jinete
+-   📄 Credenciales QR individuales en PDF y descargas masivas
+-   🎲 Sorteo transparente por categoría con triple mezcla
+-   🐎 Control automático de caballos necesarios y reservas
+-   🔢 Asignación automática de orden y palenques
+-   💾 Persistencia y consulta de sorteos realizados
+-   📄 Generación y reimpresión de PDF de sorteos
+-   🌐 Publicación y despublicación de sorteos en frontend público
+-   🔁 Eliminación administrativa para permitir resortear
+-   🕒 Registro de fecha, hora y usuario del sorteo
+-   📝 Auditoría básica de sorteos
+
 ## Próximamente
 
--   📝 Gestión de inscripciones
--   📱 Confirmación mediante QR
--   🎲 Sorteo transparente
--   📄 Generación automática de PDF
 -   🏆 Clasificaciones y resultados
 -   📊 Estadísticas
 -   📝 Auditoría completa
@@ -158,13 +169,14 @@ jineteada_26
 -   [x] Jinetes
 -   [x] Caballos
 -   [x] Tropillas
--   [ ] Inscripciones
--   [ ] QR
--   [ ] Sorteo
+-   [x] Inscripciones
+-   [x] QR y acreditación
+-   [x] Sorteo
+-   [x] Reportes PDF de QR y sorteos
+-   [x] Publicación pública de sorteos
 -   [ ] Resultados
--   [ ] Reportes PDF
 -   [ ] Estadísticas
--   [ ] Auditoría
+-   [ ] Auditoría completa
 
 ------------------------------------------------------------------------
 
@@ -204,9 +216,50 @@ Implementado:
 -   [x] Conservación histórica de estados relevantes como lesiones.
 -   [x] Validaciones finales del módulo.
 
-### ➡️ Próximo módulo
+### ✅ Módulo 7 --- Inscripciones, QR y Acreditación
 
-**Módulo 7 --- Inscripciones**
+**Completado y probado.**
+
+Implementado:
+
+-   [x] Inscripciones por fecha y categoría.
+-   [x] Estados pendiente, validado, ausente y no habilitado.
+-   [x] QR único y permanente por jinete.
+-   [x] Acreditación mediante lectura QR.
+-   [x] Cierre y reapertura controlada de inscripciones.
+-   [x] Control de ausencias, suspensiones y descalificaciones.
+-   [x] Credencial QR individual en PDF.
+-   [x] Descarga masiva de credenciales.
+
+## Septiembre 2026
+
+### ✅ Módulo 8 --- Sorteos
+
+**Implementado y probado.**
+
+Implementado:
+
+-   [x] Preparación por campeonato, fecha y categoría.
+-   [x] Resumen de jinetes inscriptos, validados y caballos.
+-   [x] Control mínimo de jinetes validados + 2 reservas.
+-   [x] Bloqueo cuando faltan caballos.
+-   [x] Gestión de caballos excedentes y reservas.
+-   [x] Triple mezcla independiente de jinetes y caballos.
+-   [x] Asignación automática de orden y palenques 1, 2 y 3.
+-   [x] Persistencia y consulta posterior del sorteo.
+-   [x] PDF funcional y reimpresión.
+-   [x] Publicación y despublicación en frontend público.
+-   [x] Eliminación administrativa para permitir resortear.
+-   [x] Auditoría básica del sorteo.
+-   [x] Horarios en America/Argentina/Buenos_Aires.
+
+### ➡️ Pendiente
+
+Quedan **3 módulos principales**:
+
+1. **Módulo 9 --- Resultados**
+2. **Estadísticas**
+3. **Auditoría completa**
 
 ------------------------------------------------------------------------
 
