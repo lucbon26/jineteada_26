@@ -2,29 +2,99 @@
 {% block title %}QR - {{ jinete.apellidos }}, {{ jinete.nombres }}{% endblock %}
 {% block contenido %}
 <div class="container-fluid">
-    <a href="/inscripciones/qr" class="text-decoration-none">← Credenciales QR</a>
+    <a
+        href="/inscripciones/qr{% if campeonato_id %}?campeonato_id={{ campeonato_id }}{% endif %}"
+        class="text-decoration-none"
+    >
+        ← Credenciales QR
+    </a>
 
     <div class="card shadow-sm mt-3 mx-auto" style="max-width: 560px;">
         <div class="card-body text-center p-5">
-            <h2 class="h4 mb-1">{{ jinete.apellidos }}, {{ jinete.nombres }}</h2>
-            <div class="text-muted mb-4">DNI {{ jinete.dni }}</div>
+            <h2 class="h4 mb-1">
+                {{ jinete.apellidos }}, {{ jinete.nombres }}
+            </h2>
 
-            {% if qr_base64 %}
-            <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR de {{ jinete.nombre_completo }}" class="img-fluid" style="max-width: 320px;">
+            <div class="text-muted">DNI {{ jinete.dni }}</div>
+
+            {% if categoria %}
+            <div class="mt-2 mb-4">
+                <span class="badge text-bg-primary fs-6">
+                    {{ categoria.nombre }}
+                </span>
+
+                {% if campeonato %}
+                <div class="small text-muted mt-1">
+                    {{ campeonato.nombre }}
+                </div>
+                {% endif %}
+            </div>
             {% else %}
-            <div class="alert alert-warning">Falta instalar <code>qrcode[pil]</code> para generar la imagen.</div>
+            <div class="alert alert-warning mt-3 mb-4">
+                Este jinete no tiene una categoría de campeonato disponible
+                para generar el PDF.
+            </div>
             {% endif %}
 
-            <div class="small text-muted mt-3">QR único del jinete. No cambia entre fechas.</div>
+            {% if qr_base64 %}
+            <img
+                src="data:image/png;base64,{{ qr_base64 }}"
+                alt="QR de {{ jinete.nombre_completo }}"
+                class="img-fluid"
+                style="max-width: 320px;"
+            >
+            {% else %}
+            <div class="alert alert-warning">
+                Falta instalar <code>qrcode[pil]</code> para generar la imagen.
+            </div>
+            {% endif %}
 
-            <div class="d-flex justify-content-center gap-2 mt-4 d-print-none">
-                {% if qr_base64 %}<a href="/inscripciones/qr/{{ jinete.id }}/png" class="btn btn-outline-primary">Descargar PNG</a>{% endif %}
-                <button type="button" onclick="window.print()" class="btn btn-primary">Imprimir</button>
+            <div class="small text-muted mt-3">
+                QR único del jinete. No cambia entre fechas.
             </div>
 
-            <form method="post" action="/inscripciones/qr/{{ jinete.id }}/regenerar" class="mt-4 d-print-none"
-                  onsubmit="return confirm('¿Regenerar el QR? El QR anterior dejará de funcionar.');">
-                <button class="btn btn-sm btn-outline-danger" type="submit">Regenerar QR</button>
+            <div
+                class="d-flex flex-wrap justify-content-center gap-2 mt-4 d-print-none"
+            >
+                {% if categoria %}
+                <a
+                    href="/inscripciones/qr/{{ jinete.id }}/pdf?campeonato_id={{ campeonato_id }}"
+                    class="btn btn-primary"
+                >
+                    Descargar PDF
+                </a>
+                {% endif %}
+
+                {% if qr_base64 %}
+                <a
+                    href="/inscripciones/qr/{{ jinete.id }}/png"
+                    class="btn btn-outline-primary"
+                >
+                    Descargar PNG
+                </a>
+                {% endif %}
+
+                <button
+                    type="button"
+                    onclick="window.print()"
+                    class="btn btn-outline-secondary"
+                >
+                    Imprimir pantalla
+                </button>
+            </div>
+
+            <form
+                method="post"
+                action="/inscripciones/qr/{{ jinete.id }}/regenerar"
+                class="mt-4 d-print-none"
+                onsubmit="return confirm('¿Regenerar el QR? El QR anterior dejará de funcionar.');"
+            >
+                <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="submit"
+                >
+                    Regenerar QR
+                </button>
             </form>
         </div>
     </div>

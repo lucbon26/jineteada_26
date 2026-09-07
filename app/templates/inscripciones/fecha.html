@@ -107,7 +107,7 @@
                             <th>Categoría</th>
                             <th>Estado jinete</th>
                             <th>Inscripción</th>
-                            <th>Validación</th>
+                            <th>Validación</th><th class="text-end">QR</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -135,9 +135,17 @@
                                 <div class="small text-muted">{{ inscripcion.validado_por or '' }}</div>
                                 {% else %}-{% endif %}
                             </td>
+                            <td class="text-end">
+                                <a
+                                    href="/inscripciones/qr/{{ inscripcion.jinete.id }}/pdf?campeonato_id={{ fecha_evento.campeonato_id }}"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    PDF QR
+                                </a>
+                            </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="6" class="text-center text-muted py-5">No hay inscripciones para esta fecha.</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-5">No hay inscripciones para esta fecha.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

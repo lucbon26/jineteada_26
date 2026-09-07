@@ -63,6 +63,38 @@
             </div></div>
         </div>
 
+        {% if jinete %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Credencial QR</strong>
+            </div>
+
+            <div class="card-body">
+                {% if qr_asignaciones %}
+                <p class="text-muted mb-3">
+                    Descargar la credencial individual lista para imprimir.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2">
+                    {% for asignacion in qr_asignaciones %}
+                    <a
+                        href="/inscripciones/qr/{{ jinete.id }}/pdf?campeonato_id={{ asignacion.campeonato.id }}"
+                        class="btn btn-outline-primary"
+                    >
+                        Descargar PDF · {{ asignacion.categoria.nombre }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-muted">
+                    El jinete todavía no tiene una categoría asignada
+                    en un campeonato.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="d-flex justify-content-between align-items-center gap-2">
             <div>
                 {% if jinete %}

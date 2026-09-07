@@ -959,14 +959,47 @@ def formulario_editar_jinete(
 ):
     jinete = obtener_jinete_o_404(jinete_id, db)
 
+    asignaciones = db.scalars(
+        select(JineteCampeonato)
+        .where(
+            JineteCampeonato.jinete_id == jinete_id,
+            JineteCampeonato.categoria_id.is_not(None),
+        )
+        .order_by(JineteCampeonato.id.desc())
+    ).all()
+
+    qr_asignaciones = []
+
+    for asignacion in asignaciones:
+        campeonato = db.get(
+            Campeonato,
+            asignacion.campeonato_id,
+        )
+        categoria = db.get(
+            Categoria,
+            asignacion.categoria_id,
+        )
+
+        if campeonato is None or categoria is None:
+            continue
+
+        qr_asignaciones.append({
+            "campeonato": campeonato,
+            "categoria": categoria,
+        })
+
     return templates.TemplateResponse(
         request=request,
         name="jinetes/formulario.html",
         context={
             "accion": "Editar",
             "jinete": jinete,
+            "qr_asignaciones": qr_asignaciones,
             "menu_activo": "jinetes",
-            "usuario_nombre": request.session.get("usuario_nombre", "Administrador"),
+            "usuario_nombre": request.session.get(
+                "usuario_nombre",
+                "Administrador",
+            ),
         },
     )
 

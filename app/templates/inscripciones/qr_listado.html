@@ -2,38 +2,151 @@
 {% block title %}QR de jinetes{% endblock %}
 {% block contenido %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
             <a href="/inscripciones" class="text-decoration-none">← Inscripciones</a>
             <h1 class="h3 mb-1 mt-2">Credenciales QR</h1>
-            <p class="text-muted mb-0">Cada jinete tiene un QR único y permanente.</p>
+            <p class="text-muted mb-0">
+                Cada jinete tiene un QR único y permanente.
+            </p>
         </div>
     </div>
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <form method="get" class="row g-2">
-                <div class="col-md-6"><input name="buscar" value="{{ buscar }}" class="form-control" placeholder="Apellido, nombre o DNI"></div>
-                <div class="col-md-auto"><button class="btn btn-primary">Buscar</button></div>
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Campeonato</label>
+                    <select
+                        name="campeonato_id"
+                        class="form-select"
+                        onchange="this.form.submit()"
+                    >
+                        {% for campeonato in campeonatos %}
+                        <option
+                            value="{{ campeonato.id }}"
+                            {% if campeonato_id == campeonato.id %}selected{% endif %}
+                        >
+                            {{ campeonato.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Categoría</label>
+                    <select name="categoria_id" class="form-select">
+                        <option value="0">Todas</option>
+                        {% for categoria in categorias %}
+                        <option
+                            value="{{ categoria.id }}"
+                            {% if categoria_id == categoria.id %}selected{% endif %}
+                        >
+                            {{ categoria.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Buscar</label>
+                    <input
+                        name="buscar"
+                        value="{{ buscar }}"
+                        class="form-control"
+                        placeholder="Apellido, nombre o DNI"
+                    >
+                </div>
+
+                <div class="col-md-auto">
+                    <button class="btn btn-primary">Buscar</button>
+                </div>
             </form>
         </div>
     </div>
+
+    {% if campeonato_id %}
+    <div class="card shadow-sm mb-4 border-primary">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <strong class="me-2">Descarga masiva:</strong>
+
+                <a
+                    href="/inscripciones/qr/zip?campeonato_id={{ campeonato_id }}"
+                    class="btn btn-primary"
+                >
+                    Descargar todos
+                </a>
+
+                {% for categoria in categorias %}
+                <a
+                    href="/inscripciones/qr/zip?campeonato_id={{ campeonato_id }}&categoria_id={{ categoria.id }}"
+                    class="btn btn-outline-primary"
+                >
+                    {{ categoria.nombre }}
+                </a>
+                {% endfor %}
+            </div>
+
+            <div class="small text-muted mt-2">
+                Cada descarga genera un ZIP con un PDF independiente por jinete.
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>Jinete</th><th>DNI</th><th>Estado</th><th class="text-end">QR</th></tr></thead>
-                    <tbody>
-                        {% for jinete in jinetes %}
+                    <thead class="table-light">
                         <tr>
-                            <td><strong>{{ jinete.apellidos }}, {{ jinete.nombres }}</strong></td>
-                            <td>{{ jinete.dni }}</td>
-                            <td>{{ jinete.estado|capitalize }}</td>
-                            <td class="text-end"><a href="/inscripciones/qr/{{ jinete.id }}" class="btn btn-sm btn-outline-primary">Ver / imprimir</a></td>
+                            <th>Jinete</th>
+                            <th>DNI</th>
+                            <th>Categoría</th>
+                            <th>Estado</th>
+                            <th class="text-end">QR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in filas_qr %}
+                        <tr>
+                            <td>
+                                <strong>
+                                    {{ fila.jinete.apellidos }},
+                                    {{ fila.jinete.nombres }}
+                                </strong>
+                            </td>
+                            <td>{{ fila.jinete.dni }}</td>
+                            <td>{{ fila.categoria.nombre }}</td>
+                            <td>{{ fila.jinete.estado|capitalize }}</td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a
+                                        href="/inscripciones/qr/{{ fila.jinete.id }}?campeonato_id={{ campeonato_id }}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        Ver QR
+                                    </a>
+
+                                    <a
+                                        href="/inscripciones/qr/{{ fila.jinete.id }}/pdf?campeonato_id={{ campeonato_id }}"
+                                        class="btn btn-sm btn-primary"
+                                    >
+                                        Descargar PDF
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="text-center text-muted py-5">No hay jinetes.</td></tr>
+                        <tr>
+                            <td
+                                colspan="5"
+                                class="text-center text-muted py-5"
+                            >
+                                No hay jinetes para los filtros seleccionados.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

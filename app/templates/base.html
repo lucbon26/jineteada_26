@@ -119,8 +119,16 @@
                 🐎 Tropillas
             </a>
 
-            <a href="#" class="disabled">
+            <a href="/inscripciones" class="{% if menu_activo == 'inscripciones' %}active{% endif %}">
                 📝 Inscripciones
+            </a>
+
+            <a href="/acreditacion" class="{% if menu_activo == 'acreditacion' %}active{% endif %}">
+                📱 Acreditaciones
+            </a>
+
+            <a href="/inscripciones/qr" class="{% if menu_activo == 'credenciales_qr' %}active{% endif %}">
+                🔳 Credenciales QR
             </a>
 
             <a href="#" class="disabled">

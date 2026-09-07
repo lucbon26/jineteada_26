@@ -4,6 +4,8 @@ import base64
 from datetime import datetime
 from io import BytesIO
 import secrets
+import unicodedata
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -178,6 +180,153 @@ def generar_qr_png_bytes(texto: str) -> bytes | None:
     imagen = qrcode.make(texto)
     buffer = BytesIO()
     imagen.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def normalizar_nombre_archivo(valor: str) -> str:
+    texto = unicodedata.normalize("NFKD", valor or "")
+    texto = texto.encode("ascii", "ignore").decode("ascii")
+    texto = texto.upper().strip()
+    texto = "".join(
+        caracter if caracter.isalnum() else "_"
+        for caracter in texto
+    )
+    while "__" in texto:
+        texto = texto.replace("__", "_")
+    return texto.strip("_") or "SIN_DATO"
+
+
+def obtener_asignacion_qr(
+    jinete_id: int,
+    db: Session,
+    campeonato_id: int = 0,
+) -> JineteCampeonato | None:
+    consulta = (
+        select(JineteCampeonato)
+        .where(
+            JineteCampeonato.jinete_id == jinete_id,
+            JineteCampeonato.categoria_id.is_not(None),
+        )
+        .order_by(JineteCampeonato.id.desc())
+    )
+
+    if campeonato_id > 0:
+        consulta = consulta.where(
+            JineteCampeonato.campeonato_id == campeonato_id
+        )
+
+    return db.scalar(consulta)
+
+
+def nombre_pdf_jinete(
+    jinete: Jinete,
+    categoria: Categoria,
+) -> str:
+    nombres = normalizar_nombre_archivo(jinete.nombres)
+    apellidos = normalizar_nombre_archivo(jinete.apellidos)
+    categoria_nombre = normalizar_nombre_archivo(categoria.nombre)
+    return f"{nombres}_{apellidos}_{categoria_nombre}.pdf"
+
+
+def generar_pdf_qr_bytes(
+    jinete: Jinete,
+    categoria: Categoria,
+    campeonato: Campeonato | None,
+    db: Session,
+) -> bytes:
+    try:
+        from reportlab.lib.pagesizes import A6
+        from reportlab.lib.utils import ImageReader
+        from reportlab.pdfgen import canvas
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta instalar la dependencia reportlab.",
+        ) from exc
+
+    token = asegurar_qr_token(jinete, db)
+    png = generar_qr_png_bytes(f"JINETE:{token}")
+
+    if png is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Falta instalar la dependencia qrcode[pil].",
+        )
+
+    buffer = BytesIO()
+    ancho, alto = A6
+    pdf = canvas.Canvas(buffer, pagesize=A6)
+
+    campeonato_nombre = (
+        getattr(campeonato, "nombre", None)
+        or "Campeonato"
+    )
+
+    pdf.setTitle(
+        f"{jinete.nombres} {jinete.apellidos} - {categoria.nombre}"
+    )
+
+    # Encabezado
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawCentredString(
+        ancho / 2,
+        alto - 28,
+        campeonato_nombre[:44],
+    )
+
+    # Nombre
+    nombre = f"{jinete.nombres} {jinete.apellidos}".upper()
+    pdf.setFont("Helvetica-Bold", 15)
+
+    if len(nombre) <= 30:
+        pdf.drawCentredString(ancho / 2, alto - 56, nombre)
+        y_datos = alto - 78
+    else:
+        palabras = nombre.split()
+        corte = max(1, len(palabras) // 2)
+        linea_1 = " ".join(palabras[:corte])
+        linea_2 = " ".join(palabras[corte:])
+        pdf.drawCentredString(ancho / 2, alto - 53, linea_1[:36])
+        pdf.drawCentredString(ancho / 2, alto - 70, linea_2[:36])
+        y_datos = alto - 91
+
+    # DNI y categoría
+    pdf.setFont("Helvetica", 10)
+    pdf.drawCentredString(ancho / 2, y_datos, f"DNI {jinete.dni}")
+
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawCentredString(
+        ancho / 2,
+        y_datos - 18,
+        categoria.nombre.upper()[:36],
+    )
+
+    # QR grande
+    qr_tamano = 180
+    qr_x = (ancho - qr_tamano) / 2
+    qr_y = 42
+
+    pdf.drawImage(
+        ImageReader(BytesIO(png)),
+        qr_x,
+        qr_y,
+        width=qr_tamano,
+        height=qr_tamano,
+        preserveAspectRatio=True,
+        mask="auto",
+    )
+
+    pdf.setFont("Helvetica", 7)
+    pdf.drawCentredString(
+        ancho / 2,
+        27,
+        "QR unico y permanente del jinete",
+    )
+
+    pdf.showPage()
+    pdf.save()
+
+    buffer.seek(0)
     return buffer.getvalue()
 
 
@@ -564,35 +713,84 @@ def reabrir_inscripcion(
 def listado_qr_jinetes(
     request: Request,
     buscar: str = Query(default=""),
+    campeonato_id: int = Query(default=0),
+    categoria_id: int = Query(default=0),
     db: Session = Depends(get_db),
 ):
-    consulta = select(Jinete)
-    texto = buscar.strip()
+    campeonatos = db.scalars(
+        select(Campeonato).order_by(Campeonato.id.desc())
+    ).all()
 
-    if texto:
-        patron = f"%{texto}%"
-        consulta = consulta.where(
-            or_(
-                Jinete.nombres.ilike(patron),
-                Jinete.apellidos.ilike(patron),
-                Jinete.dni.ilike(patron),
+    if campeonato_id <= 0 and campeonatos:
+        campeonato_id = campeonatos[0].id
+
+    categorias = []
+    filas_qr = []
+
+    if campeonato_id > 0:
+        categorias = db.scalars(
+            select(Categoria)
+            .where(Categoria.campeonato_id == campeonato_id)
+            .order_by(Categoria.orden.asc(), Categoria.nombre.asc())
+        ).all()
+
+        consulta = (
+            select(JineteCampeonato)
+            .join(Jinete, Jinete.id == JineteCampeonato.jinete_id)
+            .where(
+                JineteCampeonato.campeonato_id == campeonato_id,
+                JineteCampeonato.categoria_id.is_not(None),
             )
         )
 
-    jinetes = db.scalars(
-        consulta.order_by(Jinete.apellidos.asc(), Jinete.nombres.asc())
-    ).all()
+        if categoria_id > 0:
+            consulta = consulta.where(
+                JineteCampeonato.categoria_id == categoria_id
+            )
 
-    for jinete in jinetes:
-        asegurar_qr_token(jinete, db)
-    db.commit()
+        texto = buscar.strip()
+        if texto:
+            patron = f"%{texto}%"
+            consulta = consulta.where(
+                or_(
+                    Jinete.nombres.ilike(patron),
+                    Jinete.apellidos.ilike(patron),
+                    Jinete.dni.ilike(patron),
+                )
+            )
+
+        asignaciones = db.scalars(
+            consulta.order_by(
+                Jinete.apellidos.asc(),
+                Jinete.nombres.asc(),
+            )
+        ).all()
+
+        for asignacion in asignaciones:
+            jinete = db.get(Jinete, asignacion.jinete_id)
+            categoria = db.get(Categoria, asignacion.categoria_id)
+
+            if jinete is None or categoria is None:
+                continue
+
+            asegurar_qr_token(jinete, db)
+            filas_qr.append({
+                "jinete": jinete,
+                "categoria": categoria,
+            })
+
+        db.commit()
 
     return templates.TemplateResponse(
         request=request,
         name="inscripciones/qr_listado.html",
         context={
-            "jinetes": jinetes,
+            "filas_qr": filas_qr,
             "buscar": buscar,
+            "campeonatos": campeonatos,
+            "campeonato_id": campeonato_id,
+            "categorias": categorias,
+            "categoria_id": categoria_id,
             "menu_activo": "inscripciones",
             "usuario_nombre": request.session.get(
                 "usuario_nombre",
@@ -602,22 +800,162 @@ def listado_qr_jinetes(
     )
 
 
+# IMPORTANTE: esta ruta está antes de /qr/{jinete_id} para evitar
+# que FastAPI interprete "zip" como un ID de jinete.
+@router.get("/qr/zip")
+def descargar_qr_bulk_zip(
+    campeonato_id: int = Query(..., gt=0),
+    categoria_id: int = Query(default=0),
+    db: Session = Depends(get_db),
+):
+    campeonato = db.get(Campeonato, campeonato_id)
+
+    if campeonato is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Campeonato no encontrado",
+        )
+
+    consulta = (
+        select(JineteCampeonato)
+        .join(Jinete, Jinete.id == JineteCampeonato.jinete_id)
+        .where(
+            JineteCampeonato.campeonato_id == campeonato_id,
+            JineteCampeonato.categoria_id.is_not(None),
+        )
+    )
+
+    categoria_filtro = None
+
+    if categoria_id > 0:
+        categoria_filtro = db.get(Categoria, categoria_id)
+
+        if (
+            categoria_filtro is None
+            or categoria_filtro.campeonato_id != campeonato_id
+        ):
+            raise HTTPException(
+                status_code=404,
+                detail="Categoría no encontrada en este campeonato",
+            )
+
+        consulta = consulta.where(
+            JineteCampeonato.categoria_id == categoria_id
+        )
+
+    asignaciones = db.scalars(
+        consulta.order_by(
+            Jinete.apellidos.asc(),
+            Jinete.nombres.asc(),
+        )
+    ).all()
+
+    if not asignaciones:
+        raise HTTPException(
+            status_code=404,
+            detail="No hay jinetes para generar.",
+        )
+
+    zip_buffer = BytesIO()
+    nombres_usados: set[str] = set()
+
+    with ZipFile(
+        zip_buffer,
+        "w",
+        compression=ZIP_DEFLATED,
+    ) as archivo_zip:
+        for asignacion in asignaciones:
+            jinete = db.get(Jinete, asignacion.jinete_id)
+            categoria = db.get(Categoria, asignacion.categoria_id)
+
+            if jinete is None or categoria is None:
+                continue
+
+            pdf = generar_pdf_qr_bytes(
+                jinete,
+                categoria,
+                campeonato,
+                db,
+            )
+
+            nombre = nombre_pdf_jinete(
+                jinete,
+                categoria,
+            )
+
+            # Evita que dos homónimos se pisen dentro del ZIP.
+            if nombre in nombres_usados:
+                base_nombre = nombre[:-4]
+                dni = normalizar_nombre_archivo(jinete.dni)
+                nombre = f"{base_nombre}_{dni}.pdf"
+
+            nombres_usados.add(nombre)
+            archivo_zip.writestr(nombre, pdf)
+
+    db.commit()
+    zip_buffer.seek(0)
+
+    if categoria_filtro is not None:
+        etiqueta = normalizar_nombre_archivo(
+            categoria_filtro.nombre
+        )
+        nombre_zip = f"QR_{etiqueta}.zip"
+    else:
+        nombre_zip = "QR_TODOS.zip"
+
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{nombre_zip}"'
+        },
+    )
+
+
 @router.get("/qr/{jinete_id}", response_class=HTMLResponse)
 def ver_qr_jinete(
     jinete_id: int,
     request: Request,
+    campeonato_id: int = Query(default=0),
     db: Session = Depends(get_db),
 ):
     jinete = db.get(Jinete, jinete_id)
+
     if jinete is None:
-        raise HTTPException(status_code=404, detail="Jinete no encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail="Jinete no encontrado",
+        )
+
+    asignacion = obtener_asignacion_qr(
+        jinete.id,
+        db,
+        campeonato_id=campeonato_id,
+    )
+
+    categoria = (
+        db.get(Categoria, asignacion.categoria_id)
+        if asignacion and asignacion.categoria_id
+        else None
+    )
+
+    campeonato = (
+        db.get(Campeonato, asignacion.campeonato_id)
+        if asignacion
+        else None
+    )
 
     token = asegurar_qr_token(jinete, db)
     db.commit()
 
     payload = f"JINETE:{token}"
     png = generar_qr_png_bytes(payload)
-    qr_base64 = base64.b64encode(png).decode("ascii") if png else None
+    qr_base64 = (
+        base64.b64encode(png).decode("ascii")
+        if png
+        else None
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -626,11 +964,86 @@ def ver_qr_jinete(
             "jinete": jinete,
             "payload": payload,
             "qr_base64": qr_base64,
+            "categoria": categoria,
+            "campeonato": campeonato,
+            "campeonato_id": (
+                asignacion.campeonato_id
+                if asignacion
+                else 0
+            ),
             "menu_activo": "inscripciones",
             "usuario_nombre": request.session.get(
                 "usuario_nombre",
                 "Administrador",
             ),
+        },
+    )
+
+
+@router.get("/qr/{jinete_id}/pdf")
+def descargar_qr_jinete_pdf(
+    jinete_id: int,
+    campeonato_id: int = Query(default=0),
+    db: Session = Depends(get_db),
+):
+    jinete = db.get(Jinete, jinete_id)
+
+    if jinete is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Jinete no encontrado",
+        )
+
+    asignacion = obtener_asignacion_qr(
+        jinete.id,
+        db,
+        campeonato_id=campeonato_id,
+    )
+
+    if asignacion is None or asignacion.categoria_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "El jinete no tiene categoría asignada "
+                "en el campeonato."
+            ),
+        )
+
+    categoria = db.get(
+        Categoria,
+        asignacion.categoria_id,
+    )
+    campeonato = db.get(
+        Campeonato,
+        asignacion.campeonato_id,
+    )
+
+    if categoria is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Categoría no encontrada.",
+        )
+
+    pdf = generar_pdf_qr_bytes(
+        jinete,
+        categoria,
+        campeonato,
+        db,
+    )
+
+    db.commit()
+
+    nombre = nombre_pdf_jinete(
+        jinete,
+        categoria,
+    )
+
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{nombre}"'
         },
     )
 
