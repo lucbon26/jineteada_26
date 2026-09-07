@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Sorteo {{ sorteo.categoria.nombre }}{% endblock %}
+{% block page_title %}Detalle del sorteo{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+    <a
+        href="/sorteos?campeonato_id={{ sorteo.fecha.campeonato_id }}&fecha_id={{ sorteo.fecha_id }}"
+        class="text-decoration-none"
+    >
+        ← Volver a Sorteos
+    </a>
+
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mt-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">{{ sorteo.categoria.nombre }}</h1>
+            <div class="text-muted">
+                {{ sorteo.fecha.campeonato.nombre }} ·
+                {{ sorteo.fecha.nombre }} ·
+                {{ sorteo.fecha.fecha.strftime('%d/%m/%Y') }}
+            </div>
+            <div class="small text-muted mt-1">
+                Sorteado {{ fecha_hora_local(sorteo.sorteado_en).strftime('%d/%m/%Y %H:%M') }}
+                por {{ sorteo.sorteado_por_nombre or '-' }}
+            </div>
+        </div>
+
+        <div>
+            {% if sorteo.publicado %}
+            <span class="badge text-bg-success fs-6">Publicado</span>
+            {% else %}
+            <span class="badge text-bg-secondary fs-6">No publicado</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="/sorteos/{{ sorteo.id }}/pdf" class="btn btn-primary">
+            Descargar / reimprimir PDF
+        </a>
+
+        {% if sorteo.publicado %}
+        <form method="post" action="/sorteos/{{ sorteo.id }}/despublicar">
+            <button class="btn btn-outline-warning">Despublicar</button>
+        </form>
+        <a href="/publico/sorteos" target="_blank" class="btn btn-outline-success">
+            Ver publicación
+        </a>
+        {% else %}
+        <form method="post" action="/sorteos/{{ sorteo.id }}/publicar">
+            <button class="btn btn-success">Publicar sorteo</button>
+        </form>
+        {% endif %}
+
+        <form
+            method="post"
+            action="/sorteos/{{ sorteo.id }}/eliminar"
+            onsubmit="return confirm('Se eliminará este sorteo y quedará habilitado para volver a sortear. Los jinetes, acreditaciones y caballos NO se borrarán. ¿Continuar?');"
+        >
+            <button class="btn btn-outline-danger">
+                Eliminar para resortear
+            </button>
+        </form>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong>Resultado definitivo</strong>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Orden</th>
+                            <th>Palenque</th>
+                            <th>Jinete</th>
+                            <th>Localidad</th>
+                            <th>Caballo</th>
+                            <th>Tropilla</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in sorteo.detalles if not detalle.es_reserva %}
+                        <tr>
+                            <td><strong>{{ detalle.orden }}</strong></td>
+                            <td>{{ detalle.palenque }}</td>
+                            <td>{{ detalle.jinete_nombre }}</td>
+                            <td>{{ detalle.jinete_localidad or '-' }}</td>
+                            <td>{{ detalle.caballo_nombre }}</td>
+                            <td>{{ detalle.tropilla_nombre or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong>Caballos de reserva ({{ sorteo.cantidad_reservas }})</strong>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                {% for detalle in sorteo.detalles if detalle.es_reserva %}
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <strong>Reserva {{ detalle.orden }} · {{ detalle.caballo_nombre }}</strong>
+                        <div class="small text-muted">
+                            {{ detalle.tropilla_nombre or 'Sin tropilla' }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <strong>Auditoría</strong>
+        </div>
+        <div class="card-body">
+            {% for item in auditoria %}
+            <div class="border-bottom py-2">
+                <strong>{{ item.evento }}</strong>
+                · {{ fecha_hora_local(item.creado_en).strftime('%d/%m/%Y %H:%M:%S') }}
+                · {{ item.usuario_nombre or 'Sistema' }}
+                {% if item.detalle %}
+                <div class="small text-muted">{{ item.detalle }}</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-muted">Sin eventos registrados.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

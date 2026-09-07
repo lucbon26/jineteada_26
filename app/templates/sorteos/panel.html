@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Sorteos{% endblock %}
+{% block page_title %}Sorteos{% endblock %}
+
+{% block contenido %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap gap-2 align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Preparación de sorteos</h1>
+            <p class="text-muted mb-0">
+                Se sortean únicamente jinetes validados. Cada categoría requiere
+                dos caballos de reserva como mínimo.
+            </p>
+        </div>
+
+        <a href="/publico/sorteos" target="_blank" class="btn btn-outline-secondary">
+            Ver frontend público
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">Campeonato</label>
+                    <select
+                        class="form-select"
+                        name="campeonato_id"
+                        onchange="this.form.submit()"
+                    >
+                        {% for campeonato in campeonatos %}
+                        <option value="{{ campeonato.id }}"
+                            {% if campeonato_id == campeonato.id %}selected{% endif %}>
+                            {{ campeonato.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Fecha</label>
+                    <select class="form-select" name="fecha_id">
+                        {% for fecha in fechas %}
+                        <option value="{{ fecha.id }}"
+                            {% if fecha_id == fecha.id %}selected{% endif %}>
+                            {{ fecha.fecha.strftime('%d/%m/%Y') }} · {{ fecha.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100">Ver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if fecha_evento %}
+    <div class="alert alert-light border mb-4">
+        <strong>{{ fecha_evento.nombre }}</strong>
+        · {{ fecha_evento.fecha.strftime('%d/%m/%Y') }}
+        · {{ fecha_evento.localidad }}
+    </div>
+
+    {% for seccion in secciones %}
+    <section class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong class="fs-5">{{ seccion.categoria.nombre }}</strong>
+            </div>
+            {% if seccion.sorteo %}
+                {% if seccion.sorteo.publicado %}
+                <span class="badge text-bg-success">Sorteado · Publicado</span>
+                {% else %}
+                <span class="badge text-bg-primary">Sorteado</span>
+                {% endif %}
+            {% elif seccion.faltantes > 0 %}
+                <span class="badge text-bg-danger">Faltan caballos</span>
+            {% else %}
+                <span class="badge text-bg-secondary">Pendiente</span>
+            {% endif %}
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Jinetes inscriptos</div>
+                        <div class="fs-3 fw-bold">{{ seccion.cantidad_inscriptos }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Jinetes validados</div>
+                        <div class="fs-3 fw-bold">{{ seccion.cantidad_validados }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Caballos inscriptos</div>
+                        <div class="fs-3 fw-bold">{{ seccion.cantidad_caballos }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Mínimo necesario</div>
+                        <div class="fs-3 fw-bold">{{ seccion.minimo_caballos }}</div>
+                        <div class="small text-muted">validados + 2</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Extra sobre mínimo</div>
+                        <div class="fs-3 fw-bold">{{ seccion.excedentes_sobre_minimo }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <h3 class="h6">Jinetes validados</h3>
+                    <div class="table-responsive border rounded" style="max-height: 300px;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Jinete</th>
+                                    <th>DNI</th>
+                                    <th>Localidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for jinete in seccion.jinetes_validados %}
+                                <tr>
+                                    <td>{{ jinete.apellidos }}, {{ jinete.nombres }}</td>
+                                    <td>{{ jinete.dni }}</td>
+                                    <td>{{ jinete.localidad or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="3" class="text-muted text-center py-3">Sin jinetes validados.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <h3 class="h6">Caballos inscriptos</h3>
+                    <div class="table-responsive border rounded" style="max-height: 300px;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Caballo</th>
+                                    <th>Tropilla</th>
+                                    <th>Pelaje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for caballo in seccion.caballos %}
+                                <tr>
+                                    <td>{{ caballo.nombre }}</td>
+                                    <td>{{ caballo.tropilla.nombre if caballo.tropilla else '-' }}</td>
+                                    <td>{{ caballo.pelaje or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="3" class="text-muted text-center py-3">Sin caballos asignados.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            {% if seccion.sorteo %}
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a href="/sorteos/{{ seccion.sorteo.id }}" class="btn btn-primary">
+                    Ver sorteo
+                </a>
+                <a href="/sorteos/{{ seccion.sorteo.id }}/pdf" class="btn btn-outline-primary">
+                    Descargar / reimprimir PDF
+                </a>
+            </div>
+            {% else %}
+                {% if seccion.cantidad_validados == 0 %}
+                <div class="alert alert-warning mb-0">
+                    No hay jinetes validados. Todavía no se puede sortear esta categoría.
+                </div>
+                {% elif seccion.faltantes > 0 %}
+                <div class="alert alert-danger mb-0">
+                    <strong>No se puede sortear.</strong>
+                    Faltan {{ seccion.faltantes }} caballo(s).
+                    Hay {{ seccion.cantidad_caballos }} y se necesitan
+                    {{ seccion.minimo_caballos }}.
+                </div>
+                {% else %}
+                <form
+                    method="post"
+                    action="/sorteos/{{ fecha_evento.id }}/{{ seccion.categoria.id }}/realizar"
+                    class="sorteo-form"
+                >
+                    {% if seccion.excedentes_sobre_minimo > 0 %}
+                    <div class="alert alert-info">
+                        Después de apartar las 2 reservas mínimas quedan
+                        <strong>{{ seccion.excedentes_sobre_minimo }}</strong>
+                        caballo(s) adicionales.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">¿Qué hacemos con los caballos extra?</label>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                name="modo_reserva"
+                                value="solo_2"
+                                id="solo2-{{ seccion.categoria.id }}"
+                                checked
+                            >
+                            <label class="form-check-label" for="solo2-{{ seccion.categoria.id }}">
+                                Dejar sólo 2 caballos como reserva
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="radio"
+                                name="modo_reserva"
+                                value="todos"
+                                id="todos-{{ seccion.categoria.id }}"
+                            >
+                            <label class="form-check-label" for="todos-{{ seccion.categoria.id }}">
+                                Conservar todos los sobrantes como reserva
+                            </label>
+                        </div>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="modo_reserva" value="solo_2">
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-success btn-lg">
+                        🎲 Realizar sorteo de {{ seccion.categoria.nombre }}
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+        </div>
+    </section>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<div
+    id="mezcla-overlay"
+    class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-none align-items-center justify-content-center"
+    style="z-index: 2000;"
+>
+    <div class="bg-white rounded shadow p-5 text-center" style="min-width: 320px;">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h2 class="h4">Realizando sorteo</h2>
+        <div id="mezcla-texto" class="fs-5 mt-3">Preparando...</div>
+        <div class="small text-muted mt-2">
+            Jinetes y caballos se mezclan 3 veces por separado.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll(".sorteo-form").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+        if (form.dataset.enviando === "1") {
+            return;
+        }
+
+        event.preventDefault();
+
+        const overlay = document.getElementById("mezcla-overlay");
+        const texto = document.getElementById("mezcla-texto");
+        overlay.classList.remove("d-none");
+        overlay.classList.add("d-flex");
+
+        const etapas = [
+            "Jinetes · mezcla 1 de 3",
+            "Jinetes · mezcla 2 de 3",
+            "Jinetes · mezcla 3 de 3",
+            "Caballos · mezcla 1 de 3",
+            "Caballos · mezcla 2 de 3",
+            "Caballos · mezcla 3 de 3",
+            "Guardando resultado..."
+        ];
+
+        let indice = 0;
+        texto.textContent = etapas[indice];
+
+        const timer = setInterval(() => {
+            indice += 1;
+            if (indice >= etapas.length) {
+                clearInterval(timer);
+                form.dataset.enviando = "1";
+                form.submit();
+                return;
+            }
+            texto.textContent = etapas[indice];
+        }, 450);
+    });
+});
+</script>
+{% endblock %}

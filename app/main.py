@@ -88,3 +88,8 @@ app.include_router(inscripciones_router.router)
 # MODULO7_ACREDITACION
 from app.routers import acreditacion as acreditacion_router
 app.include_router(acreditacion_router.router)
+
+# MODULO8_SORTEOS
+from app.routers import sorteos as sorteos_router
+app.include_router(sorteos_router.router)
+app.include_router(sorteos_router.public_router)
