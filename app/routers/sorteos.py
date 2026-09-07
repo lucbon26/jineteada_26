@@ -61,6 +61,13 @@ def exigir_sesion(request: Request):
     return None
 
 
+def exigir_administracion_sorteos(request: Request):
+    """Sólo MASTER y ADMIN pueden modificar sorteos."""
+    rol = str(request.session.get("usuario_rol") or "").upper()
+    if rol not in {"MASTER", "ADMIN"}:
+        raise HTTPException(status_code=403, detail="No tiene permisos para modificar sorteos.")
+
+
 def obtener_fecha_o_404(fecha_id: int, db: Session) -> Fecha:
     fecha = db.get(Fecha, fecha_id)
     if fecha is None:
@@ -388,6 +395,7 @@ def panel_sorteos(
                 "usuario_nombre",
                 "Administrador",
             ),
+            "usuario_rol": str(request.session.get("usuario_rol") or "").upper(),
         },
     )
 
@@ -403,6 +411,8 @@ def realizar_sorteo(
     redireccion = exigir_sesion(request)
     if redireccion:
         return redireccion
+
+    exigir_administracion_sorteos(request)
 
     fecha = obtener_fecha_o_404(fecha_id, db)
     categoria = obtener_categoria_o_404(categoria_id, db)
@@ -564,6 +574,7 @@ def ver_sorteo(
                 "usuario_nombre",
                 "Administrador",
             ),
+            "usuario_rol": str(request.session.get("usuario_rol") or "").upper(),
         },
     )
 
@@ -607,6 +618,8 @@ def publicar_sorteo(
     if redireccion:
         return redireccion
 
+    exigir_administracion_sorteos(request)
+
     sorteo = db.get(Sorteo, sorteo_id)
     if sorteo is None:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
@@ -639,6 +652,8 @@ def despublicar_sorteo(
     if redireccion:
         return redireccion
 
+    exigir_administracion_sorteos(request)
+
     sorteo = db.get(Sorteo, sorteo_id)
     if sorteo is None:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
@@ -670,6 +685,8 @@ def eliminar_sorteo(
     redireccion = exigir_sesion(request)
     if redireccion:
         return redireccion
+
+    exigir_administracion_sorteos(request)
 
     sorteo = db.get(Sorteo, sorteo_id)
     if sorteo is None:

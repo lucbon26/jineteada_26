@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -7,8 +7,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logger import logger
-from app.routers import auth, campeonatos
+from app.routers import auth, campeonatos, usuarios
 from app.services.bootstrap import crear_admin_inicial
+from app.core.permissions import acceso_permitido, destino_por_rol
 from app.routers import fechas
 from app.routers import categorias
 from app.routers import jinetes
@@ -23,12 +24,8 @@ app = FastAPI(
 )
 
 
-app.add_middleware(
-    SessionMiddleware,
-    secret_key="cambiar-esta-clave-en-produccion"
-)
-
 app.include_router(auth.router)
+app.include_router(usuarios.router)
 app.include_router(campeonatos.router)
 app.include_router(fechas.router)
 app.include_router(categorias.router)
@@ -41,6 +38,27 @@ app.include_router(caballos_fechas.router)
 templates = Jinja2Templates(directory="app/templates")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+
+@app.middleware("http")
+async def control_accesos(request: Request, call_next):
+    path = request.url.path
+    if acceso_permitido(request):
+        return await call_next(request)
+
+    if not request.session.get("usuario_id"):
+        if path != "/login":
+            return RedirectResponse(f"/login?next={path}", status_code=303)
+        return await call_next(request)
+
+    return PlainTextResponse("No tenés permisos para acceder a esta sección.", status_code=403)
+
+# SessionMiddleware debe quedar por fuera del middleware de permisos
+# para que request.session exista cuando se evalúa el acceso.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="cambiar-esta-clave-en-produccion"
+)
 
 
 @app.on_event("startup")
@@ -69,6 +87,10 @@ def dashboard(request: Request):
 
     if not request.session.get("usuario_id"):
         return RedirectResponse("/login", status_code=303)
+
+    destino = destino_por_rol(request.session.get("usuario_rol"))
+    if destino != "/":
+        return RedirectResponse(destino, status_code=303)
 
     return templates.TemplateResponse(
         request=request,

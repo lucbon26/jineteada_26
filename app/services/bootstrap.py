@@ -1,32 +1,34 @@
 from sqlalchemy.orm import Session
 
 from app.core.logger import logger
+from app.core.permissions import MASTER_USUARIO
 from app.core.security import hash_password
 from app.models.usuario import Usuario
 
 
 def crear_admin_inicial(db: Session) -> None:
-    """
-    Crea el usuario administrador inicial si la tabla usuarios está vacía.
+    """Garantiza la existencia del usuario MASTER protegido del sistema."""
+    master = db.query(Usuario).filter(Usuario.usuario == MASTER_USUARIO).first()
 
-    Esto permite iniciar el sistema por primera vez sin ejecutar scripts manuales.
-    Luego, si ya existe al menos un usuario, no hace nada.
-    """
-
-    cantidad_usuarios = db.query(Usuario).count()
-
-    if cantidad_usuarios > 0:
+    if master:
+        cambios = False
+        if master.rol != "MASTER":
+            master.rol = "MASTER"
+            cambios = True
+        if not master.activo:
+            master.activo = True
+            cambios = True
+        if cambios:
+            db.commit()
         return
 
-    admin = Usuario(
+    master = Usuario(
         nombre="Administrador",
-        usuario="admin",
+        usuario=MASTER_USUARIO,
         password_hash=hash_password("admin123"),
-        rol="ADMIN",
+        rol="MASTER",
         activo=True,
     )
-
-    db.add(admin)
+    db.add(master)
     db.commit()
-
-    logger.info("Usuario administrador inicial creado: admin / admin123")
+    logger.info("Usuario MASTER inicial creado")

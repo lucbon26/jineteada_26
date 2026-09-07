@@ -94,50 +94,41 @@
             🐎 Gestión de Jineteadas
         </div>
 
+        {% set rol = request.session.get("usuario_rol", "")|upper %}
         <nav class="sidebar-menu">
-            <a href="/" class="{% if menu_activo == 'inicio' %}active{% endif %}">
-                🏠 Inicio
-            </a>
+            {% if rol in ["MASTER", "ADMIN", "SECRETARIA"] %}
+            <a href="/" class="{% if menu_activo == 'inicio' %}active{% endif %}">🏠 Inicio</a>
+            {% endif %}
 
-            <a href="/campeonatos" class="{% if menu_activo == 'campeonatos' %}active{% endif %}">
-                🏆 Campeonatos
-            </a>
+            {% if rol in ["MASTER", "ADMIN"] %}
+            <a href="/campeonatos" class="{% if menu_activo == 'campeonatos' %}active{% endif %}">🏆 Campeonatos</a>
+            <a href="/campeonatos" class="{% if menu_activo == 'fechas' %}active{% endif %}">📅 Fechas</a>
+            {% endif %}
 
-            <a href="/campeonatos" class="{% if menu_activo == 'campeonatos' %}active{% endif %}">
-                📅 Fechas
-            </a>
+            {% if rol in ["MASTER", "ADMIN", "SECRETARIA"] %}
+            <a href="/jinetes" class="{% if menu_activo == 'jinetes' %}active{% endif %}">👤 Jinetes</a>
+            <a href="/caballos" class="{% if menu_activo == 'caballos' %}active{% endif %}">🐴 Caballos</a>
+            <a href="/tropillas" class="{% if menu_activo == 'tropillas' %}active{% endif %}">🐎 Tropillas</a>
+            <a href="/inscripciones" class="{% if menu_activo == 'inscripciones' %}active{% endif %}">📝 Inscripciones</a>
+            {% endif %}
 
-            <a href="/jinetes" class="{% if menu_activo == 'jinetes' %}active{% endif %}">
-                👤 Jinetes
-            </a>
+            {% if rol in ["MASTER", "ADMIN", "SECRETARIA", "ACREDITACION"] %}
+            <a href="/acreditacion" class="{% if menu_activo == 'acreditacion' %}active{% endif %}">📱 Acreditaciones</a>
+            {% endif %}
 
-            <a href="/caballos" class="{% if menu_activo == 'caballos' %}active{% endif %}">
-                🐴 Caballos
-            </a>
+            {% if rol in ["MASTER", "ADMIN", "SECRETARIA"] %}
+            <a href="/inscripciones/qr" class="{% if menu_activo == 'credenciales_qr' %}active{% endif %}">🔳 Credenciales QR</a>
+            {% endif %}
 
-            <a href="/tropillas" class="{% if menu_activo == 'tropillas' %}active{% endif %}">
-                🐎 Tropillas
-            </a>
+            {% if rol in ["MASTER", "ADMIN", "SECRETARIA", "LOCUCION", "TV"] %}
+            <a href="/sorteos" class="{% if menu_activo == 'sorteos' %}active{% endif %}">🎲 Sorteos</a>
+            <a href="#" class="disabled">📊 Resultados</a>
+            {% endif %}
 
-            <a href="/inscripciones" class="{% if menu_activo == 'inscripciones' %}active{% endif %}">
-                📝 Inscripciones
-            </a>
-
-            <a href="/acreditacion" class="{% if menu_activo == 'acreditacion' %}active{% endif %}">
-                📱 Acreditaciones
-            </a>
-
-            <a href="/inscripciones/qr" class="{% if menu_activo == 'credenciales_qr' %}active{% endif %}">
-                🔳 Credenciales QR
-            </a>
-
-            <a href="/sorteos" class="{% if menu_activo == 'sorteos' %}active{% endif %}">
-                🎲 Sorteos
-            </a>
-
-            <a href="#" class="disabled">
-                📊 Resultados
-            </a>
+            {% if rol == "MASTER" %}
+            <hr class="border-secondary">
+            <a href="/usuarios" class="{% if menu_activo == 'usuarios' %}active{% endif %}">👥 Usuarios</a>
+            {% endif %}
         </nav>
     </aside>
 

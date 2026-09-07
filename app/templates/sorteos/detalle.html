@@ -39,28 +39,28 @@
             Descargar / reimprimir PDF
         </a>
 
-        {% if sorteo.publicado %}
-        <form method="post" action="/sorteos/{{ sorteo.id }}/despublicar">
-            <button class="btn btn-outline-warning">Despublicar</button>
-        </form>
+        {% if usuario_rol in ["MASTER", "ADMIN"] %}
+            {% if sorteo.publicado %}
+            <form method="post" action="/sorteos/{{ sorteo.id }}/despublicar">
+                <button class="btn btn-outline-warning">Despublicar</button>
+            </form>
+            <a href="/publico/sorteos" target="_blank" class="btn btn-outline-success">
+                Ver publicación
+            </a>
+            {% else %}
+            <form method="post" action="/sorteos/{{ sorteo.id }}/publicar">
+                <button class="btn btn-success">Publicar sorteo</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/sorteos/{{ sorteo.id }}/eliminar"
+                  onsubmit="return confirm('Se eliminará este sorteo y quedará habilitado para volver a sortear. Los jinetes, acreditaciones y caballos NO se borrarán. ¿Continuar?');">
+                <button class="btn btn-outline-danger">Eliminar para resortear</button>
+            </form>
+        {% elif sorteo.publicado %}
         <a href="/publico/sorteos" target="_blank" class="btn btn-outline-success">
             Ver publicación
         </a>
-        {% else %}
-        <form method="post" action="/sorteos/{{ sorteo.id }}/publicar">
-            <button class="btn btn-success">Publicar sorteo</button>
-        </form>
         {% endif %}
-
-        <form
-            method="post"
-            action="/sorteos/{{ sorteo.id }}/eliminar"
-            onsubmit="return confirm('Se eliminará este sorteo y quedará habilitado para volver a sortear. Los jinetes, acreditaciones y caballos NO se borrarán. ¿Continuar?');"
-        >
-            <button class="btn btn-outline-danger">
-                Eliminar para resortear
-            </button>
-        </form>
     </div>
 
     <div class="card shadow-sm mb-4">

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.core.security import verify_password
+from app.core.permissions import destino_por_rol, normalizar_rol
 from app.models.usuario import Usuario
 
 router = APIRouter()
@@ -57,15 +58,12 @@ def login_submit(
 
         request.session["usuario_id"] = user.id
         request.session["usuario_nombre"] = user.nombre
-        request.session["usuario_rol"] = user.rol
+        request.session["usuario_rol"] = normalizar_rol(user.rol)
 
-        # Volver a la página solicitada antes del login.
+        rol = normalizar_rol(user.rol)
         destino = destino_seguro(next)
-
-        # Un usuario de rol Acreditación siempre entra en su pantalla.
-        rol = str(user.rol or "").strip().lower()
-        if rol in {"acreditación", "acreditacion"}:
-            destino = "/acreditacion"
+        if destino == "/" or rol in {"ACREDITACION", "LOCUCION", "TV"}:
+            destino = destino_por_rol(rol)
 
         return RedirectResponse(destino, status_code=303)
 
