@@ -360,7 +360,30 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                                        <div class="mb-3">
+                        <label class="form-label">
+                            Campeonato
+                        </label>
+
+                        <select
+                            name="campeonato_id"
+                            id="campeonatoImportacionJinetes"
+                            class="form-select"
+                            required
+                        >
+                            <option value="">
+                                Seleccionar campeonato...
+                            </option>
+
+                            {% for campeonato in campeonatos %}
+                            <option value="{{ campeonato.id }}">
+                                {{ campeonato.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+<div class="mb-3">
                         <label class="form-label">
                             Fecha
                         </label>
@@ -370,9 +393,10 @@
                             id="fechaImportacionJinetes"
                             class="form-select"
                             required
+                            disabled
                         >
                             <option value="">
-                                Seleccionar fecha...
+                                Primero seleccione un campeonato...
                             </option>
 
                             {% for fecha in fechas %}
@@ -446,37 +470,51 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const fechaImportacion = document.getElementById("fechaImportacionJinetes");
-    const categoriaImportacion = document.getElementById("categoriaImportacionJinetes");
+    const campeonato = document.getElementById("campeonatoImportacionJinetes");
+    const fecha = document.getElementById("fechaImportacionJinetes");
+    const categoria = document.getElementById("categoriaImportacionJinetes");
 
-    if (!fechaImportacion || !categoriaImportacion) return;
+    if (!campeonato || !fecha || !categoria) return;
 
-    const opcionesCategoriasImportacion = Array.from(
-        categoriaImportacion.querySelectorAll("option[data-campeonato]")
+    const opcionesFecha = Array.from(
+        fecha.querySelectorAll("option[data-campeonato]")
+    );
+    const opcionesCategoria = Array.from(
+        categoria.querySelectorAll("option[data-campeonato]")
     );
 
-    function actualizarCategoriaImportacion() {
-        const opcionFecha = fechaImportacion.options[fechaImportacion.selectedIndex];
-        const campeonatoId = opcionFecha ? opcionFecha.dataset.campeonato : "";
+    function cargarDependientes() {
+        const campeonatoId = campeonato.value;
 
-        categoriaImportacion.innerHTML = '<option value="">Seleccionar categoría...</option>';
+        fecha.innerHTML = '<option value="">Seleccionar fecha...</option>';
+        categoria.innerHTML = '<option value="">Seleccionar categoría...</option>';
 
         if (!campeonatoId) {
-            categoriaImportacion.disabled = true;
+            fecha.innerHTML = '<option value="">Primero seleccione un campeonato...</option>';
+            categoria.innerHTML = '<option value="">Primero seleccione un campeonato...</option>';
+            fecha.disabled = true;
+            categoria.disabled = true;
             return;
         }
 
-        opcionesCategoriasImportacion.forEach(function (opcion) {
+        opcionesFecha.forEach(function (opcion) {
             if (opcion.dataset.campeonato === campeonatoId) {
-                categoriaImportacion.appendChild(opcion.cloneNode(true));
+                fecha.appendChild(opcion.cloneNode(true));
             }
         });
 
-        categoriaImportacion.disabled = false;
+        opcionesCategoria.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                categoria.appendChild(opcion.cloneNode(true));
+            }
+        });
+
+        fecha.disabled = false;
+        categoria.disabled = false;
     }
 
-    fechaImportacion.addEventListener("change", actualizarCategoriaImportacion);
-    actualizarCategoriaImportacion();
+    campeonato.addEventListener("change", cargarDependientes);
+    cargarDependientes();
 });
 </script>
 
