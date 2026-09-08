@@ -340,13 +340,17 @@ def panel_inscripciones(
         select(Campeonato).order_by(Campeonato.id.desc())
     ).all()
 
-    consulta_fechas = select(Fecha).order_by(Fecha.fecha.asc())
+    fechas = []
     if campeonato_id > 0:
-        consulta_fechas = consulta_fechas.where(
-            Fecha.campeonato_id == campeonato_id
-        )
+        campeonato = db.get(Campeonato, campeonato_id)
+        if campeonato is None:
+            raise HTTPException(status_code=404, detail="Campeonato no encontrado.")
 
-    fechas = db.scalars(consulta_fechas).all()
+        fechas = db.scalars(
+            select(Fecha)
+            .where(Fecha.campeonato_id == campeonato_id)
+            .order_by(Fecha.fecha.asc())
+        ).all()
 
     resumen_fechas: dict[int, dict[str, int]] = {}
     for fecha in fechas:
@@ -383,21 +387,42 @@ def panel_inscripciones(
 @router.post("/generar")
 def generar_inscripciones_varias_fechas(
     request: Request,
-    fecha_ids: list[int] = Form(...),
+    campeonato_id: int = Form(...),
+    fecha_ids: list[int] | None = Form(None),
     db: Session = Depends(get_db),
 ):
+    if not fecha_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Seleccioná al menos una fecha para generar las inscripciones.",
+        )
+
+    campeonato = db.get(Campeonato, campeonato_id)
+    if campeonato is None:
+        raise HTTPException(status_code=404, detail="Campeonato no encontrado.")
+
     creadas = 0
     procesadas = 0
 
     for fecha_id in fecha_ids:
         fecha = db.get(Fecha, fecha_id)
-        if fecha is None or fecha.inscripcion_cerrada:
+        if fecha is None:
+            continue
+        if fecha.campeonato_id != campeonato_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Una de las fechas seleccionadas no pertenece al campeonato activo.",
+            )
+        if fecha.inscripcion_cerrada:
             continue
         creadas += preparar_inscripciones_fecha(fecha, db)
         procesadas += 1
 
     return RedirectResponse(
-        url=f"/inscripciones?generadas={creadas}&fechas={procesadas}",
+        url=(
+            f"/inscripciones?campeonato_id={campeonato_id}"
+            f"&generadas={creadas}&fechas={procesadas}"
+        ),
         status_code=303,
     )
 
@@ -720,9 +745,6 @@ def listado_qr_jinetes(
     campeonatos = db.scalars(
         select(Campeonato).order_by(Campeonato.id.desc())
     ).all()
-
-    if campeonato_id <= 0 and campeonatos:
-        campeonato_id = campeonatos[0].id
 
     categorias = []
     filas_qr = []

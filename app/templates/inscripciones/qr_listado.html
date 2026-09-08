@@ -22,6 +22,7 @@
                         class="form-select"
                         onchange="this.form.submit()"
                     >
+                        <option value="0" {% if not campeonato_id %}selected{% endif %}>Seleccionar campeonato...</option>
                         {% for campeonato in campeonatos %}
                         <option
                             value="{{ campeonato.id }}"
@@ -73,7 +74,7 @@
 
                 <a
                     href="/inscripciones/qr/zip?campeonato_id={{ campeonato_id }}"
-                    class="btn btn-primary"
+                    class="btn btn-primary js-descarga-qr"
                 >
                     Descargar todos
                 </a>
@@ -81,7 +82,7 @@
                 {% for categoria in categorias %}
                 <a
                     href="/inscripciones/qr/zip?campeonato_id={{ campeonato_id }}&categoria_id={{ categoria.id }}"
-                    class="btn btn-outline-primary"
+                    class="btn btn-outline-primary js-descarga-qr"
                 >
                     {{ categoria.nombre }}
                 </a>
@@ -154,4 +155,112 @@
         </div>
     </div>
 </div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
+    <div
+        id="qr-toast"
+        class="toast align-items-center border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+    >
+        <div class="d-flex">
+            <div id="qr-toast-body" class="toast-body"></div>
+            <button
+                type="button"
+                class="btn-close me-2 m-auto"
+                data-bs-dismiss="toast"
+                aria-label="Cerrar"
+            ></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const toastEl = document.getElementById("qr-toast");
+    const toastBody = document.getElementById("qr-toast-body");
+
+    function mostrarAviso(mensaje, tipo = "warning") {
+        toastEl.classList.remove(
+            "text-bg-warning",
+            "text-bg-danger",
+            "text-bg-success"
+        );
+        toastEl.classList.add(
+            tipo === "danger" ? "text-bg-danger" :
+            tipo === "success" ? "text-bg-success" :
+            "text-bg-warning"
+        );
+        toastBody.textContent = mensaje;
+
+        const toast = bootstrap.Toast.getOrCreateInstance(toastEl, {
+            delay: 4500
+        });
+        toast.show();
+    }
+
+    function nombreArchivoDesdeHeaders(response) {
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        return match ? match[1] : "credenciales_qr.zip";
+    }
+
+    document.querySelectorAll(".js-descarga-qr").forEach((enlace) => {
+        enlace.addEventListener("click", async (event) => {
+            event.preventDefault();
+
+            const textoOriginal = enlace.textContent;
+            enlace.classList.add("disabled");
+            enlace.setAttribute("aria-disabled", "true");
+
+            try {
+                const response = await fetch(enlace.href, {
+                    method: "GET",
+                    credentials: "same-origin"
+                });
+
+                if (!response.ok) {
+                    let mensaje = "No se pudo generar la descarga.";
+
+                    try {
+                        const data = await response.json();
+                        if (data && data.detail) {
+                            mensaje = data.detail;
+                        }
+                    } catch (_) {
+                        // Si no viene JSON, usamos el mensaje genérico.
+                    }
+
+                    mostrarAviso(mensaje, "warning");
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const descarga = document.createElement("a");
+
+                descarga.href = url;
+                descarga.download = nombreArchivoDesdeHeaders(response);
+                document.body.appendChild(descarga);
+                descarga.click();
+                descarga.remove();
+
+                URL.revokeObjectURL(url);
+            } catch (_) {
+                mostrarAviso(
+                    "Ocurrió un error al intentar generar las credenciales QR.",
+                    "danger"
+                );
+            } finally {
+                enlace.classList.remove("disabled");
+                enlace.removeAttribute("aria-disabled");
+                enlace.textContent = textoOriginal;
+            }
+        });
+    });
+})();
+</script>
 {% endblock %}

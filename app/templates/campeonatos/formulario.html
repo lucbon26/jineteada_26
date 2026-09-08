@@ -95,6 +95,19 @@
                             </select>
                         </div>
 
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="modo_prueba"
+                                    name="modo_prueba" value="1"
+                                    {% if campeonato and campeonato.modo_prueba %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="modo_prueba">🧪 Modo prueba</label>
+                            </div>
+                            <div class="form-text">
+                                No genera auditoría oficial de sorteos. El MASTER puede eliminar luego
+                                todos sus datos sin borrar jinetes, caballos ni tropillas maestros.
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between">
                             <a href="/campeonatos" class="btn btn-outline-secondary">
                                 Cancelar

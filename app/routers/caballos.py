@@ -21,6 +21,7 @@ from app.core.database import get_db
 from app.models.caballo import Caballo
 from app.models.caballo_fecha import CaballoFecha
 from app.models.caballo_historial import CaballoHistorial
+from app.models.campeonato import Campeonato
 from app.models.categoria import Categoria
 from app.models.fecha import Fecha
 from app.models.tropilla import Tropilla
@@ -129,12 +130,38 @@ def listar_caballos(
     request: Request,
     buscar: str = Query(default=""),
     estado: str = Query(default="todos"),
+    campeonato_id: int = Query(default=0),
     fecha_id: int = Query(default=0),
     categoria_id: int = Query(default=0),
     db: Session = Depends(get_db),
 ):
     consulta = select(Caballo)
     texto = buscar.strip()
+
+    # Los filtros Fecha/Categoría siempre quedan acotados al campeonato.
+    # Si llega una selección vieja/incompatible, se limpia en vez de mezclar datos.
+    if campeonato_id > 0:
+        if db.get(Campeonato, campeonato_id) is None:
+            campeonato_id = 0
+            fecha_id = 0
+            categoria_id = 0
+        else:
+            if fecha_id > 0:
+                fecha_filtro = db.get(Fecha, fecha_id)
+                if fecha_filtro is None or fecha_filtro.campeonato_id != campeonato_id:
+                    fecha_id = 0
+
+            if categoria_id > 0:
+                categoria_filtro = db.get(Categoria, categoria_id)
+                if (
+                    categoria_filtro is None
+                    or categoria_filtro.campeonato_id != campeonato_id
+                ):
+                    categoria_id = 0
+    elif fecha_id > 0 or categoria_id > 0:
+        # No permitimos aplicar una fecha/categoría sin campeonato explícito.
+        fecha_id = 0
+        categoria_id = 0
 
     if texto:
         patron = f"%{texto}%"
@@ -176,10 +203,22 @@ def listar_caballos(
                 )
             )
         )
+    elif campeonato_id > 0:
+        consulta = consulta.where(
+            Caballo.id.in_(
+                select(CaballoFecha.caballo_id)
+                .join(Fecha, CaballoFecha.fecha_id == Fecha.id)
+                .where(Fecha.campeonato_id == campeonato_id)
+            )
+        )
 
     caballos = db.scalars(
         consulta.order_by(Caballo.nombre.asc())
     ).unique().all()
+
+    campeonatos = db.scalars(
+        select(Campeonato).order_by(Campeonato.id.desc())
+    ).all()
 
     fechas = db.scalars(
         select(Fecha).order_by(Fecha.fecha.asc())
@@ -205,8 +244,10 @@ def listar_caballos(
             "caballos": caballos,
             "buscar": buscar,
             "estado": estado,
+            "campeonato_id": campeonato_id,
             "fecha_id": fecha_id,
             "categoria_id": categoria_id,
+            "campeonatos": campeonatos,
             "fechas": fechas,
             "categorias": categorias,
             "asignacion_por_caballo": asignacion_por_caballo,
@@ -332,16 +373,41 @@ def descargar_modelo_excel():
 @router.post("/importar-excel")
 async def importar_caballos_excel(
     request: Request,
+    campeonato_id: int = Form(...),
     fecha_id: int = Form(...),
     categoria_id: int = Form(...),
+    modo_caballos: str = Form(default="aleatorizar"),
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    fecha_destino, _ = validar_fecha_categoria(
+    campeonato = db.get(Campeonato, campeonato_id)
+    if campeonato is None:
+        raise HTTPException(status_code=404, detail="Campeonato no encontrado.")
+
+    fecha_destino, categoria_destino = validar_fecha_categoria(
         fecha_id,
         categoria_id,
         db,
     )
+
+    if fecha_destino.campeonato_id != campeonato_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha seleccionada no pertenece al campeonato elegido.",
+        )
+
+    if categoria_destino.campeonato_id != campeonato_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La categoría seleccionada no pertenece al campeonato elegido.",
+        )
+
+    if modo_caballos not in {"aleatorizar", "mantener_orden"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Modo de caballos inválido.",
+        )
+    aleatorizar_sorteo = modo_caballos == "aleatorizar"
 
     if not archivo.filename:
         raise HTTPException(status_code=400, detail="Debe seleccionar un archivo.")
@@ -389,6 +455,7 @@ async def importar_caballos_excel(
     errores = 0
     conflictos: list[int] = []
 
+    orden_importacion = 0
     for fila in hoja.iter_rows(min_row=2, values_only=True):
         valores = list(fila[:7])
 
@@ -423,6 +490,8 @@ async def importar_caballos_excel(
         if not nombre or not nombre_tropilla:
             errores += 1
             continue
+
+        orden_importacion += 1
 
         tropilla = db.scalar(
             select(Tropilla).where(
@@ -510,6 +579,8 @@ async def importar_caballos_excel(
                     caballo_id=caballo.id,
                     fecha_id=fecha_id,
                     categoria_id=categoria_id,
+                    orden_carga=orden_importacion,
+                    aleatorizar_sorteo=aleatorizar_sorteo,
                 )
             )
             continue
@@ -518,6 +589,8 @@ async def importar_caballos_excel(
             asignacion.fecha_id == fecha_id
             and asignacion.categoria_id == categoria_id
         ):
+            asignacion.orden_carga = orden_importacion
+            asignacion.aleatorizar_sorteo = aleatorizar_sorteo
             ya_asignados += 1
             continue
 
@@ -542,6 +615,8 @@ async def importar_caballos_excel(
 
             asignacion.fecha_id = fecha_id
             asignacion.categoria_id = categoria_id
+            asignacion.orden_carga = orden_importacion
+            asignacion.aleatorizar_sorteo = aleatorizar_sorteo
             reasignados_auto += 1
             continue
 

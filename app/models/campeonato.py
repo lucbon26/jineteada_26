@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, String, Text
+from sqlalchemy import Boolean, Date, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -46,6 +46,14 @@ class Campeonato(Base):
         String(20),
         nullable=False,
         default="borrador",
+    )
+
+    modo_prueba: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+        index=True,
     )
 
     creado_en: Mapped[datetime] = mapped_column(

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.campeonato import Campeonato
 from app.models.categoria import Categoria
 from app.models.fecha import Fecha
 from app.models.jinete import Jinete
@@ -60,6 +61,7 @@ def respuesta_error(http: int, titulo: str, mensaje: str, codigo: str):
 @router.get("", response_class=HTMLResponse)
 def pantalla_acreditacion(
     request: Request,
+    campeonato_id: int = 0,
     fecha_id: int = 0,
     db: Session = Depends(get_db),
 ):
@@ -67,9 +69,20 @@ def pantalla_acreditacion(
     if bloqueo:
         return bloqueo
 
-    fechas = db.scalars(
-        select(Fecha).order_by(Fecha.fecha.asc(), Fecha.id.asc())
+    campeonatos = db.scalars(
+        select(Campeonato).order_by(Campeonato.id.desc())
     ).all()
+
+    fechas = []
+    if campeonato_id > 0:
+        if db.get(Campeonato, campeonato_id) is None:
+            campeonato_id = 0
+        else:
+            fechas = db.scalars(
+                select(Fecha)
+                .where(Fecha.campeonato_id == campeonato_id)
+                .order_by(Fecha.fecha.asc(), Fecha.id.asc())
+            ).all()
 
     fecha_seleccionada = None
     resumen = {
@@ -82,7 +95,11 @@ def pantalla_acreditacion(
 
     if fecha_id:
         fecha_seleccionada = db.get(Fecha, fecha_id)
-        if fecha_seleccionada is not None:
+        if (
+            fecha_seleccionada is not None
+            and campeonato_id > 0
+            and fecha_seleccionada.campeonato_id == campeonato_id
+        ):
             if not fecha_seleccionada.inscripcion_cerrada:
                 preparar_inscripciones_fecha(fecha_seleccionada, db)
 
@@ -103,11 +120,15 @@ def pantalla_acreditacion(
             }
             request.session["acreditacion_fecha_id"] = fecha_seleccionada.id
 
-    elif request.session.get("acreditacion_fecha_id"):
+    elif campeonato_id > 0 and request.session.get("acreditacion_fecha_id"):
         guardada = int(request.session["acreditacion_fecha_id"])
-        if db.get(Fecha, guardada):
+        fecha_guardada = db.get(Fecha, guardada)
+        if fecha_guardada and fecha_guardada.campeonato_id == campeonato_id:
             return RedirectResponse(
-                url=f"/acreditacion?fecha_id={guardada}",
+                url=(
+                    f"/acreditacion?campeonato_id={campeonato_id}"
+                    f"&fecha_id={guardada}"
+                ),
                 status_code=303,
             )
 
@@ -115,6 +136,8 @@ def pantalla_acreditacion(
         request=request,
         name="acreditacion/mobile.html",
         context={
+            "campeonatos": campeonatos,
+            "campeonato_id": campeonato_id,
             "fechas": fechas,
             "fecha_evento": fecha_seleccionada,
             "resumen": resumen,

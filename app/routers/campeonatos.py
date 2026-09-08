@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
@@ -34,6 +34,10 @@ def usuario_autenticado(request: Request) -> bool:
     """
 
     return bool(request.session.get("usuario_id"))
+
+
+def usuario_es_master(request: Request) -> bool:
+    return str(request.session.get("usuario_rol") or "").upper() == "MASTER"
 
 
 def convertir_fecha(valor: str | None) -> date | None:
@@ -114,6 +118,7 @@ def crear_campeonato(
     fecha_inicio: str = Form(""),
     fecha_fin: str = Form(""),
     estado: str = Form("borrador"),
+    modo_prueba: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -169,6 +174,7 @@ def crear_campeonato(
         fecha_inicio=fecha_inicio_convertida,
         fecha_fin=fecha_fin_convertida,
         estado=estado,
+        modo_prueba=(modo_prueba == "1"),
     )
 
     db.add(campeonato)
@@ -221,6 +227,7 @@ def editar_campeonato(
     fecha_inicio: str = Form(""),
     fecha_fin: str = Form(""),
     estado: str = Form("borrador"),
+    modo_prueba: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -283,6 +290,7 @@ def editar_campeonato(
     campeonato.fecha_inicio = fecha_inicio_convertida
     campeonato.fecha_fin = fecha_fin_convertida
     campeonato.estado = estado
+    campeonato.modo_prueba = (modo_prueba == "1")
 
     db.commit()
 
@@ -293,33 +301,35 @@ def editar_campeonato(
 
 
 @router.post("/{campeonato_id}/eliminar")
-def eliminar_campeonato(
-    campeonato_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    """
-    Elimina un campeonato.
-
-    Más adelante restringiremos la eliminación cuando tenga
-    fechas, inscripciones o resultados asociados.
-    """
-
+def eliminar_campeonato(campeonato_id: int, request: Request, db: Session = Depends(get_db)):
     if not usuario_autenticado(request):
         return RedirectResponse("/login", status_code=303)
+    if not usuario_es_master(request):
+        raise HTTPException(status_code=403, detail="Acceso exclusivo MASTER.")
 
     campeonato = db.get(Campeonato, campeonato_id)
+    if campeonato is None:
+        return RedirectResponse("/campeonatos", status_code=303)
+    if not campeonato.modo_prueba:
+        raise HTTPException(status_code=400, detail="Un campeonato real no puede eliminarse desde esta opción.")
 
-    if campeonato is not None:
-        db.delete(campeonato)
-        db.commit()
+    fecha_ids = list(db.scalars(select(Fecha.id).where(Fecha.campeonato_id == campeonato_id)).all())
+    if fecha_ids:
+        sorteo_ids = list(db.scalars(select(Sorteo.id).where(Sorteo.fecha_id.in_(fecha_ids))).all())
+        if sorteo_ids:
+            db.execute(delete(SorteoDetalle).where(SorteoDetalle.sorteo_id.in_(sorteo_ids)))
+        db.execute(delete(SorteoAuditoria).where(SorteoAuditoria.fecha_id.in_(fecha_ids)))
+        db.execute(delete(Sorteo).where(Sorteo.fecha_id.in_(fecha_ids)))
+        db.execute(delete(CaballoFecha).where(CaballoFecha.fecha_id.in_(fecha_ids)))
+        db.execute(delete(JineteFecha).where(JineteFecha.fecha_id.in_(fecha_ids)))
 
-    return RedirectResponse(
-        "/campeonatos",
-        status_code=303,
-    )
-    
-    
+    db.execute(delete(CaballoHistorial).where(CaballoHistorial.campeonato_id == campeonato_id))
+    db.execute(delete(JineteCampeonato).where(JineteCampeonato.campeonato_id == campeonato_id))
+    db.delete(campeonato)
+    db.commit()
+    return RedirectResponse("/campeonatos?prueba_eliminada=1", status_code=303)
+
+
 @router.get("/{campeonato_id}", response_class=HTMLResponse)
 def detalle_campeonato(
     campeonato_id: int,

@@ -132,12 +132,33 @@ def listar_jinetes(
     request: Request,
     buscar: str = Query(default=""),
     estado: str = Query(default="todos"),
+    campeonato_id: int = Query(default=0),
     fecha_id: int = Query(default=0),
     categoria_id: int = Query(default=0),
     db: Session = Depends(get_db),
 ):
     consulta = select(Jinete)
     texto = buscar.strip()
+
+    # Fecha y Categoría siempre quedan acotadas al campeonato seleccionado.
+    if campeonato_id > 0:
+        if db.get(Campeonato, campeonato_id) is None:
+            campeonato_id = 0
+            fecha_id = 0
+            categoria_id = 0
+        else:
+            if fecha_id > 0:
+                fecha_filtro = db.get(Fecha, fecha_id)
+                if fecha_filtro is None or fecha_filtro.campeonato_id != campeonato_id:
+                    fecha_id = 0
+
+            if categoria_id > 0:
+                categoria_filtro = db.get(Categoria, categoria_id)
+                if categoria_filtro is None or categoria_filtro.campeonato_id != campeonato_id:
+                    categoria_id = 0
+    elif fecha_id != 0 or categoria_id > 0:
+        fecha_id = 0
+        categoria_id = 0
 
     if texto:
         patron = f"%{texto}%"
@@ -167,14 +188,21 @@ def listar_jinetes(
                 JineteFecha.categoria_id == categoria_id
             )
 
-        consulta = consulta.where(
-            Jinete.id.in_(subconsulta)
-        )
+        consulta = consulta.where(Jinete.id.in_(subconsulta))
     elif categoria_id > 0:
         consulta = consulta.where(
             Jinete.id.in_(
                 select(JineteCampeonato.jinete_id).where(
-                    JineteCampeonato.categoria_id == categoria_id
+                    JineteCampeonato.campeonato_id == campeonato_id,
+                    JineteCampeonato.categoria_id == categoria_id,
+                )
+            )
+        )
+    elif campeonato_id > 0:
+        consulta = consulta.where(
+            Jinete.id.in_(
+                select(JineteCampeonato.jinete_id).where(
+                    JineteCampeonato.campeonato_id == campeonato_id
                 )
             )
         )
@@ -203,13 +231,26 @@ def listar_jinetes(
         .order_by(JineteCampeonato.id.desc())
     ).all()
 
+    campeonatos = db.scalars(
+        select(Campeonato).order_by(Campeonato.id.desc())
+    ).all()
+
     categorias_por_jinete = {}
+    asignaciones_por_jinete = {}
 
     for asignacion in asignaciones_campeonato:
         categoria = db.get(Categoria, asignacion.categoria_id)
 
         if categoria is None:
             continue
+
+        asignaciones_por_jinete.setdefault(asignacion.jinete_id, []).append(
+            {
+                "campeonato_id": asignacion.campeonato_id,
+                "categoria_id": categoria.id,
+                "categoria_nombre": categoria.nombre,
+            }
+        )
 
         categorias_por_jinete.setdefault(
             asignacion.jinete_id,
@@ -226,13 +267,16 @@ def listar_jinetes(
         name="jinetes/listado.html",
         context={
             "jinetes": jinetes,
+            "campeonatos": campeonatos,
             "buscar": buscar,
             "estado": estado,
+            "campeonato_id": campeonato_id,
             "fecha_id": fecha_id,
             "categoria_id": categoria_id,
             "fechas": fechas,
             "categorias": categorias,
             "categorias_por_jinete": categorias_por_jinete,
+            "asignaciones_por_jinete": asignaciones_por_jinete,
             "importados": request.query_params.get("importados"),
             "existentes": request.query_params.get("existentes"),
             "ya_en_fecha": request.query_params.get("ya_en_fecha"),
@@ -245,6 +289,86 @@ def listar_jinetes(
             ),
         },
     )
+
+
+@router.post("/asignar-campeonato")
+async def asignar_jinetes_a_campeonato(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    formulario = await request.form()
+
+    try:
+        campeonato_id = int(formulario.get("campeonato_id") or 0)
+        categoria_id = int(formulario.get("categoria_id") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Campeonato o categoría inválidos.")
+
+    seleccionados: list[int] = []
+    for valor in formulario.getlist("jinete_ids"):
+        try:
+            seleccionados.append(int(valor))
+        except (TypeError, ValueError):
+            continue
+    seleccionados = list(dict.fromkeys(seleccionados))
+
+    if not seleccionados:
+        raise HTTPException(status_code=400, detail="Seleccioná al menos un jinete.")
+
+    campeonato = db.get(Campeonato, campeonato_id)
+    if campeonato is None:
+        raise HTTPException(status_code=404, detail="Campeonato no encontrado.")
+
+    categoria = db.get(Categoria, categoria_id)
+    if categoria is None or categoria.campeonato_id != campeonato.id:
+        raise HTTPException(
+            status_code=400,
+            detail="La categoría seleccionada no corresponde al campeonato.",
+        )
+
+    agregados = 0
+    ya_inscriptos = 0
+    otra_categoria = 0
+
+    for jinete_id in seleccionados:
+        jinete = db.get(Jinete, jinete_id)
+        if jinete is None:
+            continue
+
+        asignacion = obtener_asignacion_campeonato(
+            jinete.id,
+            campeonato.id,
+            db,
+        )
+
+        if asignacion is None:
+            db.add(
+                JineteCampeonato(
+                    jinete_id=jinete.id,
+                    campeonato_id=campeonato.id,
+                    categoria_id=categoria.id,
+                )
+            )
+            agregados += 1
+        elif asignacion.categoria_id == categoria.id:
+            ya_inscriptos += 1
+        else:
+            otra_categoria += 1
+
+    db.commit()
+
+    partes = []
+    if agregados:
+        partes.append(f"{agregados} jinete(s) inscripto(s)")
+    if ya_inscriptos:
+        partes.append(f"{ya_inscriptos} ya estaba(n) en esa categoría")
+    if otra_categoria:
+        partes.append(
+            f"{otra_categoria} ya tenía(n) otra categoría en este campeonato"
+        )
+
+    request.session["flash_success"] = ". ".join(partes) + "."
+    return RedirectResponse(url="/jinetes", status_code=303)
 
 
 @router.get("/nuevo", response_class=HTMLResponse)
@@ -375,11 +499,16 @@ def descargar_modelo_excel():
 @router.post("/importar-excel")
 async def importar_jinetes_excel(
     request: Request,
+    campeonato_id: int = Form(...),
     fecha_id: int = Form(...),
     categoria_id: int = Form(...),
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    campeonato = db.get(Campeonato, campeonato_id)
+    if campeonato is None:
+        raise HTTPException(status_code=404, detail="Campeonato no encontrado.")
+
     fecha = db.get(Fecha, fecha_id)
     categoria_destino = db.get(Categoria, categoria_id)
 
@@ -388,6 +517,18 @@ async def importar_jinetes_excel(
 
     if categoria_destino is None:
         raise HTTPException(status_code=404, detail="Categoría no encontrada.")
+
+    if fecha.campeonato_id != campeonato_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha seleccionada no pertenece al campeonato elegido.",
+        )
+
+    if categoria_destino.campeonato_id != campeonato_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La categoría seleccionada no pertenece al campeonato elegido.",
+        )
 
     if categoria_destino.campeonato_id != fecha.campeonato_id:
         raise HTTPException(

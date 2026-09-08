@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -40,8 +40,38 @@ templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
+@app.exception_handler(HTTPException)
+async def manejar_http_exception(request: Request, exc: HTTPException):
+    """
+    En navegación HTML vuelve a la pantalla anterior y muestra un aviso
+    flotante. Las llamadas fetch/API siguen recibiendo JSON.
+    """
+    accept = request.headers.get("accept", "")
+    es_navegacion_html = "text/html" in accept
+
+    if not es_navegacion_html:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=exc.headers,
+        )
+
+    mensaje = exc.detail if isinstance(exc.detail, str) else "Ocurrió un error."
+    request.session["flash_error"] = mensaje
+
+    referer = request.headers.get("referer")
+    if referer and referer.startswith(str(request.base_url).rstrip("/")):
+        destino = referer
+    else:
+        destino = "/"
+
+    return RedirectResponse(destino, status_code=303)
+
+
 @app.middleware("http")
 async def control_accesos(request: Request, call_next):
+    request.state.flash_error = request.session.pop("flash_error", None)
+    request.state.flash_success = request.session.pop("flash_success", None)
     path = request.url.path
     if acceso_permitido(request):
         return await call_next(request)

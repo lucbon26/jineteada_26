@@ -28,13 +28,23 @@ select,input{background:#15171b;color:var(--text);padding:0 14px}button,a.btn{cu
 
 <div class="card">
 <form method="get" action="/acreditacion">
-<label class="muted" for="fecha_id">Fecha a acreditar</label>
+<label class="muted" for="campeonato_id">Campeonato</label>
+<select id="campeonato_id" name="campeonato_id" onchange="this.form.submit()">
+<option value="">Seleccionar campeonato...</option>
+{% for campeonato in campeonatos %}
+<option value="{{ campeonato.id }}" {% if campeonato_id == campeonato.id %}selected{% endif %}>{{ campeonato.nombre }}</option>
+{% endfor %}
+</select>
+
+{% if campeonato_id %}
+<label class="muted" for="fecha_id" style="display:block;margin-top:12px">Fecha a acreditar</label>
 <select id="fecha_id" name="fecha_id" onchange="this.form.submit()">
 <option value="">Seleccionar fecha...</option>
 {% for fecha in fechas %}
 <option value="{{ fecha.id }}" {% if fecha_evento and fecha_evento.id == fecha.id %}selected{% endif %}>{{ fecha.fecha.strftime('%d/%m/%Y') }} · {{ fecha.nombre }}{% if fecha.inscripcion_cerrada %} · CERRADA{% endif %}</option>
 {% endfor %}
 </select>
+{% endif %}
 </form>
 {% if fecha_evento %}
 <div class="stats">
@@ -70,7 +80,13 @@ select,input{background:#15171b;color:var(--text);padding:0 14px}button,a.btn{cu
 </div>
 {% endif %}
 {% else %}
-<div class="card">Seleccioná la fecha que vas a acreditar.</div>
+<div class="card">
+{% if campeonato_id %}
+Seleccioná la fecha que vas a acreditar.
+{% else %}
+Seleccioná primero el campeonato.
+{% endif %}
+</div>
 {% endif %}
 </div>
 

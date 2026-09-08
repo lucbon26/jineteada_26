@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from io import BytesIO
+from pathlib import Path
 import secrets
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
@@ -103,6 +104,13 @@ def registrar_auditoria(
     db: Session,
     detalle: str | None = None,
 ):
+    # Las pruebas no contaminan la auditoría oficial.
+    fecha = db.get(Fecha, fecha_id)
+    if fecha is not None:
+        campeonato = db.get(Campeonato, fecha.campeonato_id)
+        if campeonato is not None and campeonato.modo_prueba:
+            return
+
     db.add(
         SorteoAuditoria(
             fecha_id=fecha_id,
@@ -149,7 +157,10 @@ def datos_categoria(
             CaballoFecha.fecha_id == fecha.id,
             CaballoFecha.categoria_id == categoria.id,
         )
-        .order_by(CaballoFecha.id.asc())
+        .order_by(
+            CaballoFecha.orden_carga.asc().nullslast(),
+            CaballoFecha.id.asc(),
+        )
     ).all()
 
     jinetes_validados = []
@@ -175,6 +186,12 @@ def datos_categoria(
         "inscripciones": inscripciones,
         "jinetes_validados": jinetes_validados,
         "caballos": caballos,
+        "modo_caballos": (
+            "aleatorizar"
+            if not asignaciones_caballos
+            or asignaciones_caballos[0].aleatorizar_sorteo
+            else "mantener_orden"
+        ),
         "cantidad_inscriptos": len(inscripciones),
         "cantidad_validados": cantidad_validados,
         "cantidad_caballos": cantidad_caballos,
@@ -201,12 +218,15 @@ def actualizar_bandera_fecha(fecha: Fecha, db: Session):
 def generar_pdf_sorteo(sorteo: Sorteo) -> bytes:
     try:
         from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
         from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import mm
         from reportlab.platypus import (
-            SimpleDocTemplate,
+            Image,
+            KeepTogether,
             Paragraph,
+            SimpleDocTemplate,
             Spacer,
             Table,
             TableStyle,
@@ -223,37 +243,155 @@ def generar_pdf_sorteo(sorteo: Sorteo) -> bytes:
         pagesize=landscape(A4),
         leftMargin=10 * mm,
         rightMargin=10 * mm,
-        topMargin=10 * mm,
-        bottomMargin=10 * mm,
+        topMargin=8 * mm,
+        bottomMargin=8 * mm,
+        title=(
+            f"{sorteo.fecha.campeonato.nombre} - "
+            f"{sorteo.fecha.nombre} - {sorteo.categoria.nombre}"
+        ),
     )
 
     styles = getSampleStyleSheet()
+    titulo = ParagraphStyle(
+        "TituloSorteo",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=20,
+        alignment=TA_CENTER,
+        spaceAfter=1 * mm,
+    )
+    subtitulo = ParagraphStyle(
+        "SubtituloSorteo",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=13,
+        alignment=TA_CENTER,
+        spaceAfter=1 * mm,
+    )
+    metadata = ParagraphStyle(
+        "MetadataSorteo",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=11.5,
+        alignment=TA_CENTER,
+    )
+    celda = ParagraphStyle(
+        "CeldaSorteo",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=11.5,
+    )
+    celda_centro = ParagraphStyle(
+        "CeldaSorteoCentro",
+        parent=celda,
+        alignment=TA_CENTER,
+    )
+    cabecera = ParagraphStyle(
+        "CabeceraSorteo",
+        parent=celda_centro,
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=11.5,
+    )
+
+    # Recursos institucionales. Se prioriza images/pdf y se mantiene
+    # compatibilidad con los recursos existentes directamente en images.
+    raiz = Path(__file__).resolve().parents[2]
+    logo_path = raiz / "images" / "pdf" / "logo.png"
+    bandera_path = raiz / "images" / "pdf" / "bandera.png"
+    if not logo_path.exists():
+        logo_path = raiz / "images" / "logo.png"
+    if not bandera_path.exists():
+        bandera_path = raiz / "images" / "bandera.png"
+
+    def imagen_proporcional(path: Path, max_ancho_mm: float, max_alto_mm: float):
+        if not path.exists():
+            return ""
+        imagen = Image(str(path))
+        escala = min(
+            (max_ancho_mm * mm) / imagen.imageWidth,
+            (max_alto_mm * mm) / imagen.imageHeight,
+        )
+        imagen.drawWidth = imagen.imageWidth * escala
+        imagen.drawHeight = imagen.imageHeight * escala
+        return imagen
+
+    logo = imagen_proporcional(logo_path, 24, 14)
+    bandera = imagen_proporcional(bandera_path, 24, 14)
+
+    fecha_evento = sorteo.fecha.fecha.strftime("%d/%m/%Y")
+    fecha_sorteo = fecha_hora_local(sorteo.sorteado_en)
+    momento_sorteo = (
+        fecha_sorteo.strftime("%d/%m/%Y %H:%M")
+        if fecha_sorteo
+        else "-"
+    )
+    usuario_sorteo = sorteo.sorteado_por_nombre or "-"
+
+    encabezado_central = [
+        Paragraph(
+            "<b>Campeonato Rionegrino de Jineteada</b>",
+            titulo,
+        ),
+        Paragraph(
+            "<b>Sergio Herrera</b>",
+            ParagraphStyle(
+                "SergioHerrera",
+                parent=titulo,
+                fontSize=14,
+                leading=16,
+            ),
+        ),
+        Paragraph(
+            (
+                f"{sorteo.fecha.campeonato.nombre} - "
+                f"{sorteo.fecha.nombre} - {fecha_evento} - "
+                f"{sorteo.categoria.nombre.upper()}"
+            ),
+            subtitulo,
+        ),
+        Paragraph(
+            f"Sorteado: {momento_sorteo} - Por: {usuario_sorteo}",
+            metadata,
+        ),
+    ]
+
+    cabecera_superior = Table(
+        [[logo, encabezado_central, bandera]],
+        colWidths=[28 * mm, 221 * mm, 28 * mm],
+    )
+    cabecera_superior.setStyle(
+        TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (0, 0), "LEFT"),
+            ("ALIGN", (-1, 0), (-1, 0), "RIGHT"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
+        ])
+    )
+
     contenido = [
-        Paragraph(
-            f"<b>{sorteo.fecha.campeonato.nombre}</b>",
-            styles["Title"],
-        ),
-        Paragraph(
-            f"{sorteo.fecha.nombre} - {sorteo.categoria.nombre}",
-            styles["Heading2"],
-        ),
-        Paragraph(
-            f"Sorteado: {fecha_hora_local(sorteo.sorteado_en).strftime('%d/%m/%Y %H:%M')} "
-            f"- Usuario: {sorteo.sorteado_por_nombre or '-'}",
-            styles["Normal"],
-        ),
-        Spacer(1, 6 * mm),
+        KeepTogether([
+            cabecera_superior,
+            Spacer(1, 2 * mm),
+        ])
     ]
 
     filas = [[
-        "Orden",
-        "Palenque",
-        "Jinete",
-        "Localidad",
-        "Caballo",
-        "Tropilla",
-        "Puntos",
-        "Observaciones",
+        Paragraph("#", cabecera),
+        Paragraph("Palenque", cabecera),
+        Paragraph("Jinete", cabecera),
+        Paragraph("Localidad", cabecera),
+        Paragraph("Caballo", cabecera),
+        Paragraph("Tropilla", cabecera),
+        Paragraph("Puntos", cabecera),
+        Paragraph("Observaciones", cabecera),
     ]]
 
     detalles_jinetes = [
@@ -261,7 +399,6 @@ def generar_pdf_sorteo(sorteo: Sorteo) -> bytes:
         for detalle in sorteo.detalles
         if not detalle.es_reserva
     ]
-
     detalles_reserva = [
         detalle
         for detalle in sorteo.detalles
@@ -270,24 +407,24 @@ def generar_pdf_sorteo(sorteo: Sorteo) -> bytes:
 
     for detalle in detalles_jinetes:
         filas.append([
-            str(detalle.orden),
-            str(detalle.palenque or ""),
-            detalle.jinete_nombre or "-",
-            detalle.jinete_localidad or "-",
-            detalle.caballo_nombre,
-            detalle.tropilla_nombre or "-",
+            Paragraph(f"{detalle.orden:02d}", celda_centro),
+            Paragraph(str(detalle.palenque or ""), celda_centro),
+            Paragraph(detalle.jinete_nombre or "-", celda),
+            Paragraph(detalle.jinete_localidad or "-", celda),
+            Paragraph(detalle.caballo_nombre or "-", celda),
+            Paragraph(detalle.tropilla_nombre or "-", celda),
             "",
             "",
         ])
 
     for detalle in detalles_reserva:
         filas.append([
-            f"R{detalle.orden}",
-            "-",
-            "RESERVA",
-            "-",
-            detalle.caballo_nombre,
-            detalle.tropilla_nombre or "-",
+            Paragraph(f"R{detalle.orden}", celda_centro),
+            Paragraph("-", celda_centro),
+            Paragraph("<b>RESERVA</b>", celda),
+            Paragraph("-", celda),
+            Paragraph(detalle.caballo_nombre or "-", celda),
+            Paragraph(detalle.tropilla_nombre or "-", celda),
             "",
             "",
         ])
@@ -296,25 +433,28 @@ def generar_pdf_sorteo(sorteo: Sorteo) -> bytes:
         filas,
         repeatRows=1,
         colWidths=[
-            16 * mm,
-            18 * mm,
-            48 * mm,
-            34 * mm,
-            40 * mm,
-            42 * mm,
-            25 * mm,
+            10 * mm,
+            19 * mm,
             45 * mm,
+            43 * mm,
+            38 * mm,
+            29 * mm,
+            20 * mm,
+            73 * mm,
         ],
+        rowHeights=None,
     )
     tabla.setStyle(
         TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eeeeee")),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#555555")),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-            ("TOPPADDING", (0, 0), (-1, 0), 6),
+            ("ALIGN", (0, 0), (1, -1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.3 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3 * mm),
+            ("LEFTPADDING", (0, 0), (-1, -1), 1.2 * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 1.2 * mm),
         ])
     )
     contenido.append(tabla)
@@ -355,16 +495,13 @@ def panel_sorteos(
             .order_by(Fecha.fecha.asc())
         ).all()
 
-        if fecha_id <= 0 and fechas:
-            fecha_id = fechas[0].id
+        ids_fechas_validas = {item.id for item in fechas}
+
+        if fecha_id not in ids_fechas_validas:
+            fecha_id = fechas[0].id if fechas else 0
 
         if fecha_id > 0:
             fecha = obtener_fecha_o_404(fecha_id, db)
-            if fecha.campeonato_id != campeonato_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="La fecha no pertenece al campeonato seleccionado.",
-                )
 
             categorias = db.scalars(
                 select(Categoria)
@@ -406,6 +543,7 @@ def realizar_sorteo(
     categoria_id: int,
     request: Request,
     modo_reserva: str = Form(default="solo_2"),
+    modo_caballos: str = Form(default="mantener_actual"),
     db: Session = Depends(get_db),
 ):
     redireccion = exigir_sesion(request)
@@ -433,6 +571,12 @@ def realizar_sorteo(
     jinetes = datos["jinetes_validados"]
     caballos = datos["caballos"]
 
+    modo_actual_caballos = datos["modo_caballos"]
+    if modo_caballos == "mantener_actual":
+        modo_caballos = modo_actual_caballos
+    if modo_caballos not in {"aleatorizar", "mantener_orden"}:
+        raise HTTPException(status_code=400, detail="Modo de caballos inválido.")
+
     if not jinetes:
         raise HTTPException(
             status_code=400,
@@ -448,9 +592,24 @@ def realizar_sorteo(
             ),
         )
 
-    # Triple mezcla real e independiente.
+    # Los jinetes siempre se sortean aleatoriamente.
     jinetes_mezclados = triple_mezcla(jinetes)
-    caballos_mezclados = triple_mezcla(caballos)
+
+    # Los caballos respetan la decisión confirmada antes del sorteo.
+    if modo_caballos == "aleatorizar":
+        caballos_mezclados = triple_mezcla(caballos)
+    else:
+        caballos_mezclados = list(caballos)
+
+    # La decisión confirmada pasa a ser la preferencia actual de la tanda.
+    asignaciones_modo = db.scalars(
+        select(CaballoFecha).where(
+            CaballoFecha.fecha_id == fecha.id,
+            CaballoFecha.categoria_id == categoria.id,
+        )
+    ).all()
+    for asignacion in asignaciones_modo:
+        asignacion.aleatorizar_sorteo = modo_caballos == "aleatorizar"
 
     if modo_reserva == "todos":
         cantidad_total_caballos = len(caballos_mezclados)
@@ -524,7 +683,8 @@ def realizar_sorteo(
         "sorteado",
         db,
         detalle=(
-            f"Triple mezcla de jinetes y caballos. "
+            f"Jinetes aleatorizados con triple mezcla. "
+            f"Caballos: {'aleatorizados con triple mezcla' if modo_caballos == 'aleatorizar' else 'orden de carga/Excel conservado'}. "
             f"{len(jinetes_mezclados)} jinetes, "
             f"{cantidad_reservas} reservas."
         ),

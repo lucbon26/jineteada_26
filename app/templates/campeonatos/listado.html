@@ -9,6 +9,10 @@ Campeonatos
 {% endblock %}
 
 {% block contenido %}
+{% if request.query_params.get("prueba_eliminada") %}
+<div class="alert alert-success alert-dismissible fade show">Campeonato de prueba eliminado correctamente.
+<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>

@@ -25,7 +25,7 @@
                 <div class="col-md-6">
                     <label class="form-label">Campeonato</label>
                     <select name="campeonato_id" class="form-select">
-                        <option value="0">Todos</option>
+                        <option value="0">Seleccionar campeonato...</option>
                         {% for campeonato in campeonatos %}
                         <option value="{{ campeonato.id }}" {% if campeonato_id == campeonato.id %}selected{% endif %}>
                             {{ campeonato.nombre }}
@@ -34,13 +34,15 @@
                     </select>
                 </div>
                 <div class="col-md-auto">
-                    <button class="btn btn-primary" type="submit">Filtrar</button>
+                    <button class="btn btn-primary" type="submit">Trabajar con campeonato</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <form method="post" action="/inscripciones/generar">
+    {% if campeonato_id > 0 %}
+    <form method="post" action="/inscripciones/generar" id="formGenerarInscripciones">
+        <input type="hidden" name="campeonato_id" value="{{ campeonato_id }}">
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                 <div>
@@ -101,9 +103,49 @@
             </div>
         </div>
     </form>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <h5 class="mb-2">Seleccioná un campeonato</h5>
+            <p class="text-muted mb-0">
+                Las fechas e inscripciones se muestran únicamente dentro del campeonato elegido.
+            </p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>
+const formGenerarInscripciones = document.getElementById("formGenerarInscripciones");
+if (formGenerarInscripciones) {
+    formGenerarInscripciones.addEventListener("submit", function (event) {
+        const seleccionadas = formGenerarInscripciones.querySelectorAll(
+            'input[name="fecha_ids"]:checked'
+        );
+        if (seleccionadas.length === 0) {
+            event.preventDefault();
+
+            const toastEl = document.getElementById("global-toast");
+            const toastBody = document.getElementById("global-toast-body");
+            if (toastEl && toastBody && window.bootstrap) {
+                toastEl.classList.remove(
+                    "text-bg-danger",
+                    "text-bg-success"
+                );
+                toastEl.classList.add("text-bg-warning");
+                toastBody.textContent =
+                    "Seleccioná al menos una fecha para generar las inscripciones.";
+                bootstrap.Toast.getOrCreateInstance(
+                    toastEl,
+                    {delay: 5000}
+                ).show();
+            } else {
+                alert("Seleccioná al menos una fecha para generar las inscripciones.");
+            }
+        }
+    });
+}
+
 const checkAll = document.getElementById('seleccionarTodas');
 if (checkAll) {
     checkAll.addEventListener('change', function () {

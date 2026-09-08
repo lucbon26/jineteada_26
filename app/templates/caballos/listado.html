@@ -22,20 +22,60 @@
     {% endif %}
 
     <div class="card shadow-sm mb-4"><div class="card-body">
-        <form method="get" action="/caballos"><div class="row g-3">
-            <div class="col-md-4"><label for="buscar" class="form-label">Buscar</label><input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}" placeholder="Nombre, pelaje o tropilla"></div>
-            <div class="col-md-2"><label for="estado" class="form-label">Estado</label><select class="form-select" id="estado" name="estado">
-                <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option><option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option><option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivos</option><option value="lesionado" {% if estado == "lesionado" %}selected{% endif %}>Lesionados</option><option value="retirado" {% if estado == "retirado" %}selected{% endif %}>Retirados</option>
-            </select></div>
-            <div class="col-md-2"><label for="fechaFiltro" class="form-label">Fecha</label><select class="form-select" id="fechaFiltro" name="fecha_id">
-                <option value="0">Todas</option><option value="-1" {% if fecha_id == -1 %}selected{% endif %}>Sin asignación</option>
-                {% for fecha in fechas %}<option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}" {% if fecha_id == fecha.id %}selected{% endif %}>{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>{% endfor %}
-            </select></div>
-            <div class="col-md-2"><label for="categoriaFiltro" class="form-label">Categoría</label><select class="form-select" id="categoriaFiltro" name="categoria_id">
-                <option value="0">Todas</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}" {% if categoria_id == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>{% endfor %}
-            </select></div>
-            <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-outline-primary w-100">Buscar</button></div>
-        </div></form>
+        <form method="get" action="/caballos">
+        <div class="row g-3">
+            <div class="col-lg-3">
+                <label for="buscar" class="form-label">Buscar</label>
+                <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}" placeholder="Nombre, pelaje o tropilla">
+            </div>
+
+            <div class="col-lg-2">
+                <label for="estado" class="form-label">Estado</label>
+                <select class="form-select" id="estado" name="estado">
+                    <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
+                    <option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option>
+                    <option value="inactivo" {% if estado == "inactivo" %}selected{% endif %}>Inactivos</option>
+                    <option value="lesionado" {% if estado == "lesionado" %}selected{% endif %}>Lesionados</option>
+                    <option value="retirado" {% if estado == "retirado" %}selected{% endif %}>Retirados</option>
+                </select>
+            </div>
+
+            <div class="col-lg-2">
+                <label for="campeonatoFiltro" class="form-label">Campeonato</label>
+                <select class="form-select" id="campeonatoFiltro" name="campeonato_id">
+                    <option value="0">Todos</option>
+                    {% for campeonato in campeonatos %}
+                    <option value="{{ campeonato.id }}" {% if campeonato_id == campeonato.id %}selected{% endif %}>{{ campeonato.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-2">
+                <label for="fechaFiltro" class="form-label">Fecha</label>
+                <select class="form-select" id="fechaFiltro" name="fecha_id" {% if not campeonato_id %}disabled{% endif %}>
+                    <option value="0">Todas</option>
+                    <option value="-1" {% if fecha_id == -1 %}selected{% endif %}>Sin asignación</option>
+                    {% for fecha in fechas %}
+                    <option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}" {% if fecha_id == fecha.id %}selected{% endif %}>{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-2">
+                <label for="categoriaFiltro" class="form-label">Categoría</label>
+                <select class="form-select" id="categoriaFiltro" name="categoria_id" {% if not campeonato_id %}disabled{% endif %}>
+                    <option value="0">Todas</option>
+                    {% for categoria in categorias %}
+                    <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}" {% if categoria_id == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
+            </div>
+        </div>
+    </form>
     </div></div>
 
     {% if importados or existentes or ya_asignados or reasignados_auto or errores_importacion %}
@@ -72,16 +112,38 @@
 <div class="modal-header"><h5 class="modal-title">📤 Importar caballos desde Excel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
 <div class="modal-body">
 <div class="mb-3"><label class="form-label">Archivo Excel</label><input type="file" name="archivo" class="form-control" accept=".xlsx" required></div>
-<div class="mb-3"><label class="form-label">Fecha</label><select name="fecha_id" id="fechaImportacion" class="form-select" required><option value="">Seleccionar fecha...</option>{% for fecha in fechas %}<option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}">{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>{% endfor %}</select></div>
-<div class="mb-3"><label class="form-label">Categoría</label><select name="categoria_id" id="categoriaImportacion" class="form-select" required disabled><option value="">Primero seleccione una fecha...</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></div>
+<div class="mb-3"><label class="form-label">Campeonato</label><select name="campeonato_id" id="campeonatoImportacion" class="form-select" required><option value="">Seleccionar campeonato...</option>{% for campeonato in campeonatos %}<option value="{{ campeonato.id }}">{{ campeonato.nombre }}</option>{% endfor %}</select></div>
+<div class="mb-3"><label class="form-label">Fecha</label><select name="fecha_id" id="fechaImportacion" class="form-select" required disabled><option value="">Primero seleccione un campeonato...</option>{% for fecha in fechas %}<option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}">{{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}</option>{% endfor %}</select></div>
+<div class="mb-3"><label class="form-label">Categoría</label><select name="categoria_id" id="categoriaImportacion" class="form-select" required disabled><option value="">Primero seleccione un campeonato...</option>{% for categoria in categorias %}<option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>{% endfor %}</select></div>
+<div class="mb-3">
+  <label class="form-label fw-bold">Orden de los caballos para el sorteo</label>
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="modo_caballos" id="modoAleatorioCaballos" value="aleatorizar" checked>
+    <label class="form-check-label" for="modoAleatorioCaballos">Aleatorizar los caballos al realizar el sorteo</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="radio" name="modo_caballos" id="modoOrdenCaballos" value="mantener_orden">
+    <label class="form-check-label" for="modoOrdenCaballos">Mantener exactamente el orden del Excel</label>
+  </div>
+  <div class="form-text">Esta selección se mostrará nuevamente para confirmarla antes de sortear.</div>
+</div>
 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Importar caballos</button></div>
 </form></div></div></div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
- const fechaImportacion=document.getElementById("fechaImportacion"), categoriaImportacion=document.getElementById("categoriaImportacion");
- const opciones=Array.from(categoriaImportacion.querySelectorAll("option[data-campeonato]"));
- fechaImportacion.addEventListener("change",function(){const o=fechaImportacion.options[fechaImportacion.selectedIndex],cid=o.dataset.campeonato; categoriaImportacion.innerHTML='<option value="">Seleccionar categoría...</option>'; if(!cid){categoriaImportacion.disabled=true;return;} opciones.forEach(x=>{if(x.dataset.campeonato===cid)categoriaImportacion.appendChild(x.cloneNode(true));}); categoriaImportacion.disabled=false;});
+ const campeonatoImportacion=document.getElementById("campeonatoImportacion"), fechaImportacion=document.getElementById("fechaImportacion"), categoriaImportacion=document.getElementById("categoriaImportacion");
+ const opcionesFechas=Array.from(fechaImportacion.querySelectorAll("option[data-campeonato]"));
+ const opcionesCategorias=Array.from(categoriaImportacion.querySelectorAll("option[data-campeonato]"));
+ campeonatoImportacion.addEventListener("change",function(){
+   const cid=campeonatoImportacion.value;
+   fechaImportacion.innerHTML='<option value="">Seleccionar fecha...</option>';
+   categoriaImportacion.innerHTML='<option value="">Seleccionar categoría...</option>';
+   if(!cid){fechaImportacion.disabled=true;categoriaImportacion.disabled=true;return;}
+   opcionesFechas.forEach(x=>{if(x.dataset.campeonato===cid)fechaImportacion.appendChild(x.cloneNode(true));});
+   opcionesCategorias.forEach(x=>{if(x.dataset.campeonato===cid)categoriaImportacion.appendChild(x.cloneNode(true));});
+   fechaImportacion.disabled=false;categoriaImportacion.disabled=false;
+ });
  configurarMasivo("caballos");
 });
 function configurarMasivo(target){
@@ -94,4 +156,77 @@ function configurarMasivo(target){
  form.addEventListener("submit",e=>{const n=items.filter(x=>x.checked).length;if(!n||!confirm("¿Querés eliminar definitivamente los "+n+" caballos seleccionados? Esta acción no se puede deshacer."))e.preventDefault();});
 }
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const campeonatoFiltro = document.getElementById("campeonatoFiltro");
+    const fechaFiltro = document.getElementById("fechaFiltro");
+    const categoriaFiltro = document.getElementById("categoriaFiltro");
+
+    if (!campeonatoFiltro || !fechaFiltro || !categoriaFiltro) return;
+
+    const fechasOriginales = Array.from(
+        fechaFiltro.querySelectorAll("option[data-campeonato]")
+    ).map(opcion => opcion.cloneNode(true));
+
+    const categoriasOriginales = Array.from(
+        categoriaFiltro.querySelectorAll("option[data-campeonato]")
+    ).map(opcion => opcion.cloneNode(true));
+
+    const fechaSeleccionada = "{{ fecha_id }}";
+    const categoriaSeleccionada = "{{ categoria_id }}";
+
+    function reconstruirFiltros(conservarSeleccion) {
+        const campeonatoId = campeonatoFiltro.value;
+
+        fechaFiltro.innerHTML =
+            '<option value="0">Todas</option>' +
+            '<option value="-1">Sin asignación</option>';
+        categoriaFiltro.innerHTML =
+            '<option value="0">Todas</option>';
+
+        if (!campeonatoId || campeonatoId === "0") {
+            fechaFiltro.disabled = true;
+            categoriaFiltro.disabled = true;
+            fechaFiltro.value = "0";
+            categoriaFiltro.value = "0";
+            return;
+        }
+
+        fechasOriginales.forEach(opcion => {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                fechaFiltro.appendChild(opcion.cloneNode(true));
+            }
+        });
+
+        categoriasOriginales.forEach(opcion => {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                categoriaFiltro.appendChild(opcion.cloneNode(true));
+            }
+        });
+
+        fechaFiltro.disabled = false;
+        categoriaFiltro.disabled = false;
+
+        if (conservarSeleccion) {
+            if ([...fechaFiltro.options].some(o => o.value === fechaSeleccionada)) {
+                fechaFiltro.value = fechaSeleccionada;
+            }
+            if ([...categoriaFiltro.options].some(o => o.value === categoriaSeleccionada)) {
+                categoriaFiltro.value = categoriaSeleccionada;
+            }
+        } else {
+            fechaFiltro.value = "0";
+            categoriaFiltro.value = "0";
+        }
+    }
+
+    campeonatoFiltro.addEventListener("change", function () {
+        reconstruirFiltros(false);
+    });
+
+    reconstruirFiltros(true);
+});
+</script>
+
 {% endblock %}

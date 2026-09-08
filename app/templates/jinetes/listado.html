@@ -14,6 +14,10 @@
         </div>
 
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalInscribirCampeonato">
+                🏁 Inscribir en campeonato
+            </button>
+
             <button type="button" class="btn btn-outline-danger btn-masivo" data-target="jinetes">
                 Eliminar masivo
             </button>
@@ -70,27 +74,13 @@
         <div class="card-body">
             <form method="get" action="/jinetes">
                 <div class="row g-3">
-
-                    <div class="col-md-4">
-                        <label for="buscar" class="form-label">
-                            Buscar
-                        </label>
-
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="buscar"
-                            name="buscar"
-                            value="{{ buscar }}"
-                            placeholder="Apellido, nombre, DNI o localidad"
-                        >
+                    <div class="col-lg-3">
+                        <label for="buscar" class="form-label">Buscar</label>
+                        <input type="text" class="form-control" id="buscar" name="buscar" value="{{ buscar }}" placeholder="Apellido, nombre, DNI o localidad">
                     </div>
 
-                    <div class="col-md-2">
-                        <label for="estado" class="form-label">
-                            Estado
-                        </label>
-
+                    <div class="col-lg-2">
+                        <label for="estado" class="form-label">Estado</label>
                         <select class="form-select" id="estado" name="estado">
                             <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
                             <option value="activo" {% if estado == "activo" %}selected{% endif %}>Activos</option>
@@ -100,61 +90,42 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
-                        <label for="fechaFiltro" class="form-label">
-                            Fecha
-                        </label>
-
-                        <select class="form-select" id="fechaFiltro" name="fecha_id">
-                            <option value="0" {% if fecha_id == 0 %}selected{% endif %}>
-                                Todas
-                            </option>
-
-                            <option value="-1" {% if fecha_id == -1 %}selected{% endif %}>
-                                Sin fecha
-                            </option>
-
-                            {% for fecha in fechas %}
-                            <option
-                                value="{{ fecha.id }}"
-                                data-campeonato="{{ fecha.campeonato_id }}"
-                                {% if fecha_id == fecha.id %}selected{% endif %}
-                            >
-                                {{ fecha.nombre }}
-                                {% if fecha.fecha %}
-                                - {{ fecha.fecha.strftime("%d/%m/%Y") }}
-                                {% endif %}
-                            </option>
+                    <div class="col-lg-2">
+                        <label for="campeonatoFiltro" class="form-label">Campeonato</label>
+                        <select class="form-select" id="campeonatoFiltro" name="campeonato_id">
+                            <option value="0">Todos</option>
+                            {% for campeonato in campeonatos %}
+                            <option value="{{ campeonato.id }}" {% if campeonato_id == campeonato.id %}selected{% endif %}>{{ campeonato.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="col-md-2">
-                        <label for="categoriaFiltro" class="form-label">
-                            Categoría
-                        </label>
-
-                        <select class="form-select" id="categoriaFiltro" name="categoria_id">
+                    <div class="col-lg-2">
+                        <label for="fechaFiltro" class="form-label">Fecha</label>
+                        <select class="form-select" id="fechaFiltro" name="fecha_id" {% if not campeonato_id %}disabled{% endif %}>
                             <option value="0">Todas</option>
-
-                            {% for categoria in categorias %}
-                            <option
-                                value="{{ categoria.id }}"
-                                data-campeonato="{{ categoria.campeonato_id }}"
-                                {% if categoria_id == categoria.id %}selected{% endif %}
-                            >
-                                {{ categoria.nombre }}
+                            <option value="-1" {% if fecha_id == -1 %}selected{% endif %}>Sin fecha</option>
+                            {% for fecha in fechas %}
+                            <option value="{{ fecha.id }}" data-campeonato="{{ fecha.campeonato_id }}" {% if fecha_id == fecha.id %}selected{% endif %}>
+                                {{ fecha.nombre }}{% if fecha.fecha %} - {{ fecha.fecha.strftime("%d/%m/%Y") }}{% endif %}
                             </option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-outline-primary w-100">
-                            Buscar
-                        </button>
+                    <div class="col-lg-2">
+                        <label for="categoriaFiltro" class="form-label">Categoría</label>
+                        <select class="form-select" id="categoriaFiltro" name="categoria_id" {% if not campeonato_id %}disabled{% endif %}>
+                            <option value="0">Todas</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}" {% if categoria_id == categoria.id %}selected{% endif %}>{{ categoria.nombre }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
 
+                    <div class="col-lg-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary w-100">Buscar</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -258,6 +229,95 @@
     </form>
 </div>
 
+
+
+<div class="modal fade" id="modalInscribirCampeonato" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" action="/jinetes/asignar-campeonato">
+                <div class="modal-header">
+                    <h5 class="modal-title">🏁 Inscribir jinetes en campeonato</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">
+                        El jinete sigue siendo único en el padrón general. Esta acción sólo lo vincula al campeonato seleccionado.
+                    </p>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Campeonato</label>
+                            <select class="form-select" id="campeonatoVinculo" name="campeonato_id" required>
+                                <option value="">Seleccionar...</option>
+                                {% for campeonato in campeonatos %}
+                                <option value="{{ campeonato.id }}">{{ campeonato.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Categoría</label>
+                            <select class="form-select" id="categoriaVinculo" name="categoria_id" required disabled>
+                                <option value="">Primero seleccioná un campeonato...</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Filtrar por campeonato actual</label>
+                            <select class="form-select" id="campeonatoOrigen">
+                                <option value="">Todos</option>
+                                {% for campeonato in campeonatos %}
+                                <option value="{{ campeonato.id }}">{{ campeonato.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Filtrar por categoría actual</label>
+                            <select class="form-select" id="categoriaOrigen" disabled>
+                                <option value="">Todas</option>
+                                {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}" data-campeonato="{{ categoria.campeonato_id }}">{{ categoria.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Jinetes <span class="text-muted fw-normal" id="cantidadJinetesVisibles"></span></strong>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="vinculoTodos">Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="vinculoNinguno">Ninguno</button>
+                        </div>
+                    </div>
+
+                    <div class="border rounded p-2" style="max-height:360px;overflow:auto">
+                        {% for jinete in jinetes %}
+                        {% set asignaciones = asignaciones_por_jinete.get(jinete.id, []) %}
+                        <label
+                            class="d-flex gap-2 align-items-center py-2 border-bottom jinete-vinculo-fila"
+                            data-asignaciones='{{ asignaciones | tojson }}'
+                        >
+                            <input class="form-check-input jinete-vinculo" type="checkbox" name="jinete_ids" value="{{ jinete.id }}">
+                            <span class="flex-grow-1">
+                                <strong>{{ jinete.apellidos }}, {{ jinete.nombres }}</strong> · DNI {{ jinete.dni }}
+                                <span class="d-block small text-muted categoria-actual-jinete"></span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Inscribir seleccionados</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="modalImportarJinetes" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -389,156 +449,263 @@ document.addEventListener("DOMContentLoaded", function () {
     const fechaImportacion = document.getElementById("fechaImportacionJinetes");
     const categoriaImportacion = document.getElementById("categoriaImportacionJinetes");
 
-    const opcionesImportacion = Array.from(
+    if (!fechaImportacion || !categoriaImportacion) return;
+
+    const opcionesCategoriasImportacion = Array.from(
         categoriaImportacion.querySelectorAll("option[data-campeonato]")
     );
 
-    function actualizarCategoriasImportacion() {
-        const opcionFecha =
-            fechaImportacion.options[fechaImportacion.selectedIndex];
+    function actualizarCategoriaImportacion() {
+        const opcionFecha = fechaImportacion.options[fechaImportacion.selectedIndex];
+        const campeonatoId = opcionFecha ? opcionFecha.dataset.campeonato : "";
 
-        const campeonatoId =
-            opcionFecha ? opcionFecha.dataset.campeonato : "";
-
-        categoriaImportacion.innerHTML = "";
-
-        const inicial = document.createElement("option");
-        inicial.value = "";
-        inicial.textContent = campeonatoId
-            ? "Seleccionar categoría..."
-            : "Primero seleccione una fecha...";
-
-        categoriaImportacion.appendChild(inicial);
+        categoriaImportacion.innerHTML = '<option value="">Seleccionar categoría...</option>';
 
         if (!campeonatoId) {
             categoriaImportacion.disabled = true;
             return;
         }
 
-        opcionesImportacion.forEach(function (opcion) {
+        opcionesCategoriasImportacion.forEach(function (opcion) {
             if (opcion.dataset.campeonato === campeonatoId) {
-                categoriaImportacion.appendChild(
-                    opcion.cloneNode(true)
-                );
+                categoriaImportacion.appendChild(opcion.cloneNode(true));
             }
         });
 
         categoriaImportacion.disabled = false;
     }
 
-    fechaImportacion.addEventListener(
-        "change",
-        actualizarCategoriasImportacion
-    );
+    fechaImportacion.addEventListener("change", actualizarCategoriaImportacion);
+    actualizarCategoriaImportacion();
+});
+</script>
 
-    actualizarCategoriasImportacion();
-
-
-    const fechaFiltro = document.getElementById("fechaFiltro");
-    const categoriaFiltro = document.getElementById("categoriaFiltro");
-
-    const opcionesFiltro = Array.from(
-        categoriaFiltro.querySelectorAll("option[data-campeonato]")
-    );
-
-    function actualizarCategoriasFiltro() {
-        const opcionFecha =
-            fechaFiltro.options[fechaFiltro.selectedIndex];
-
-        const campeonatoId =
-            opcionFecha ? opcionFecha.dataset.campeonato : "";
-
-        const valorActual = "{{ categoria_id }}";
-
-        categoriaFiltro.innerHTML = "";
-
-        const todas = document.createElement("option");
-        todas.value = "0";
-        todas.textContent = "Todas";
-        categoriaFiltro.appendChild(todas);
-
-        if (!campeonatoId) {
-            opcionesFiltro.forEach(function (opcion) {
-                const copia = opcion.cloneNode(true);
-                if (copia.value === valorActual) {
-                    copia.selected = true;
-                }
-                categoriaFiltro.appendChild(copia);
-            });
-            return;
-        }
-
-        opcionesFiltro.forEach(function (opcion) {
-            if (opcion.dataset.campeonato === campeonatoId) {
-                const copia = opcion.cloneNode(true);
-                if (copia.value === valorActual) {
-                    copia.selected = true;
-                }
-                categoriaFiltro.appendChild(copia);
-            }
-        });
-    }
-
-    fechaFiltro.addEventListener(
-        "change",
-        actualizarCategoriasFiltro
-    );
-
-
-    actualizarCategoriasFiltro();
-
+<script>
+document.addEventListener("DOMContentLoaded", function () {
     const botonMasivo = document.querySelector('.btn-masivo[data-target="jinetes"]');
     const barraMasiva = document.getElementById("barra-jinetes");
     const formMasivo = document.getElementById("formMasivo-jinetes");
-    const columnasMasivas = formMasivo.querySelectorAll(".col-seleccion");
+
+    if (!botonMasivo || !barraMasiva || !formMasivo) return;
+
+    const columnasMasivas = Array.from(formMasivo.querySelectorAll(".col-seleccion"));
     const itemsMasivos = Array.from(formMasivo.querySelectorAll(".item-masivo"));
     const seleccionarTodos = formMasivo.querySelector(".seleccionar-todos");
     const botonEliminar = formMasivo.querySelector(".eliminar-seleccionados");
-    const botonCancelar = document.querySelector('.cancelar-masivo[data-target="jinetes"]');
+    const botonCancelar = barraMasiva.querySelector('.cancelar-masivo[data-target="jinetes"]');
 
     function actualizarMasivo() {
-        const cantidad = itemsMasivos.filter(x => x.checked).length;
-        botonEliminar.textContent = "Eliminar seleccionados (" + cantidad + ")";
-        botonEliminar.disabled = cantidad === 0;
-        seleccionarTodos.checked = cantidad > 0 && cantidad === itemsMasivos.length;
-        seleccionarTodos.indeterminate = cantidad > 0 && cantidad < itemsMasivos.length;
+        const cantidad = itemsMasivos.filter(function (item) { return item.checked; }).length;
+
+        if (botonEliminar) {
+            botonEliminar.textContent = "Eliminar seleccionados (" + cantidad + ")";
+            botonEliminar.disabled = cantidad === 0;
+        }
+
+        if (seleccionarTodos) {
+            seleccionarTodos.checked = cantidad > 0 && cantidad === itemsMasivos.length;
+            seleccionarTodos.indeterminate = cantidad > 0 && cantidad < itemsMasivos.length;
+        }
+    }
+
+    function salirModoMasivo() {
+        columnasMasivas.forEach(function (columna) { columna.classList.add("d-none"); });
+        itemsMasivos.forEach(function (item) { item.checked = false; });
+        if (seleccionarTodos) seleccionarTodos.checked = false;
+        barraMasiva.classList.add("d-none");
+        botonMasivo.classList.remove("d-none");
+        actualizarMasivo();
     }
 
     botonMasivo.addEventListener("click", function () {
-        columnasMasivas.forEach(x => x.classList.remove("d-none"));
+        columnasMasivas.forEach(function (columna) { columna.classList.remove("d-none"); });
         barraMasiva.classList.remove("d-none");
         botonMasivo.classList.add("d-none");
-    });
-
-    botonCancelar.addEventListener("click", function () {
-        columnasMasivas.forEach(x => x.classList.add("d-none"));
-        barraMasiva.classList.add("d-none");
-        botonMasivo.classList.remove("d-none");
-        itemsMasivos.forEach(x => x.checked = false);
-        seleccionarTodos.checked = false;
         actualizarMasivo();
     });
 
-    seleccionarTodos.addEventListener("change", function () {
-        itemsMasivos.forEach(x => x.checked = seleccionarTodos.checked);
-        actualizarMasivo();
-    });
+    if (botonCancelar) botonCancelar.addEventListener("click", salirModoMasivo);
 
-    itemsMasivos.forEach(x => x.addEventListener("change", actualizarMasivo));
+    if (seleccionarTodos) {
+        seleccionarTodos.addEventListener("change", function () {
+            itemsMasivos.forEach(function (item) { item.checked = seleccionarTodos.checked; });
+            actualizarMasivo();
+        });
+    }
+
+    itemsMasivos.forEach(function (item) {
+        item.addEventListener("change", actualizarMasivo);
+    });
 
     formMasivo.addEventListener("submit", function (event) {
-        const cantidad = itemsMasivos.filter(x => x.checked).length;
-        if (
-            cantidad === 0 ||
-            !confirm(
-                "¿Querés eliminar definitivamente los " +
-                cantidad +
-                " jinetes seleccionados? Esta acción no se puede deshacer."
-            )
-        ) {
+        const cantidad = itemsMasivos.filter(function (item) { return item.checked; }).length;
+        if (cantidad === 0 || !window.confirm(
+            "¿Querés eliminar definitivamente los " + cantidad +
+            " jinetes seleccionados? Esta acción no se puede deshacer."
+        )) {
             event.preventDefault();
         }
     });
+
+    actualizarMasivo();
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const campeonato = document.getElementById("campeonatoFiltro");
+    const fecha = document.getElementById("fechaFiltro");
+    const categoria = document.getElementById("categoriaFiltro");
+
+    if (!campeonato || !fecha || !categoria) return;
+
+    const opcionesFecha = Array.from(fecha.querySelectorAll("option[data-campeonato]"));
+    const opcionesCategoria = Array.from(categoria.querySelectorAll("option[data-campeonato]"));
+
+    const fechaInicial = fecha.value;
+    const categoriaInicial = categoria.value;
+
+    function cargarDependientes(conservarSeleccion) {
+        const campeonatoId = campeonato.value;
+        const fechaActual = conservarSeleccion ? fechaInicial : "0";
+        const categoriaActual = conservarSeleccion ? categoriaInicial : "0";
+
+        fecha.innerHTML = '<option value="0">Todas</option><option value="-1">Sin fecha</option>';
+        categoria.innerHTML = '<option value="0">Todas</option>';
+
+        if (!campeonatoId || campeonatoId === "0") {
+            fecha.disabled = true;
+            categoria.disabled = true;
+            return;
+        }
+
+        opcionesFecha.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                const copia = opcion.cloneNode(true);
+                if (copia.value === fechaActual) copia.selected = true;
+                fecha.appendChild(copia);
+            }
+        });
+
+        opcionesCategoria.forEach(function (opcion) {
+            if (opcion.dataset.campeonato === campeonatoId) {
+                const copia = opcion.cloneNode(true);
+                if (copia.value === categoriaActual) copia.selected = true;
+                categoria.appendChild(copia);
+            }
+        });
+
+        if (fechaActual === "-1") fecha.value = "-1";
+        fecha.disabled = false;
+        categoria.disabled = false;
+    }
+
+    campeonato.addEventListener("change", function () {
+        cargarDependientes(false);
+    });
+
+    cargarDependientes(true);
+});
+</script>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const campeonato = document.getElementById("campeonatoVinculo");
+    const categoria = document.getElementById("categoriaVinculo");
+
+    if (campeonato && categoria) {
+        const opciones = Array.from(categoria.querySelectorAll("option[data-campeonato]"));
+
+        function actualizarCategorias() {
+            const id = campeonato.value;
+            categoria.innerHTML = '<option value="">Seleccionar categoría...</option>';
+            opciones.forEach(op => {
+                if (op.dataset.campeonato === id) categoria.appendChild(op.cloneNode(true));
+            });
+            categoria.disabled = !id;
+        }
+
+        campeonato.addEventListener("change", actualizarCategorias);
+        actualizarCategorias();
+    }
+
+    const campeonatoOrigen = document.getElementById("campeonatoOrigen");
+    const categoriaOrigen = document.getElementById("categoriaOrigen");
+    const filasVinculo = Array.from(document.querySelectorAll(".jinete-vinculo-fila"));
+    const cantidadVisibles = document.getElementById("cantidadJinetesVisibles");
+
+    if (campeonatoOrigen && categoriaOrigen) {
+        const categoriasOrigen = Array.from(
+            categoriaOrigen.querySelectorAll("option[data-campeonato]")
+        );
+
+        function actualizarFiltroOrigen() {
+            const campId = campeonatoOrigen.value;
+            const catAnterior = categoriaOrigen.value;
+
+            categoriaOrigen.innerHTML = '<option value="">Todas</option>';
+            categoriasOrigen.forEach(op => {
+                if (!campId || op.dataset.campeonato === campId) {
+                    categoriaOrigen.appendChild(op.cloneNode(true));
+                }
+            });
+            categoriaOrigen.disabled = !campId;
+
+            if ([...categoriaOrigen.options].some(o => o.value === catAnterior)) {
+                categoriaOrigen.value = catAnterior;
+            }
+
+            filtrarJinetes();
+        }
+
+        function filtrarJinetes() {
+            const campId = campeonatoOrigen.value;
+            const catId = categoriaOrigen.value;
+            let visibles = 0;
+
+            filasVinculo.forEach(fila => {
+                let asignaciones = [];
+                try {
+                    asignaciones = JSON.parse(fila.dataset.asignaciones || "[]");
+                } catch (_) {}
+
+                const coincidencias = asignaciones.filter(a =>
+                    (!campId || String(a.campeonato_id) === campId) &&
+                    (!catId || String(a.categoria_id) === catId)
+                );
+
+                const mostrar = (!campId && !catId) || coincidencias.length > 0;
+                fila.classList.toggle("d-none", !mostrar);
+
+                const detalle = fila.querySelector(".categoria-actual-jinete");
+                if (detalle) {
+                    if (campId && coincidencias.length) {
+                        detalle.textContent = "Categoría actual: " +
+                            [...new Set(coincidencias.map(a => a.categoria_nombre))].join(" / ");
+                    } else {
+                        detalle.textContent = "";
+                    }
+                }
+                if (mostrar) visibles++;
+            });
+
+            if (cantidadVisibles) cantidadVisibles.textContent = `(${visibles})`;
+        }
+
+        campeonatoOrigen.addEventListener("change", actualizarFiltroOrigen);
+        categoriaOrigen.addEventListener("change", filtrarJinetes);
+        actualizarFiltroOrigen();
+    }
+
+    const checks = () => document.querySelectorAll(".jinete-vinculo");
+    document.getElementById("vinculoTodos")?.addEventListener("click", () => checks().forEach(x => {
+        if (!x.closest(".jinete-vinculo-fila")?.classList.contains("d-none")) x.checked = true;
+    }));
+    document.getElementById("vinculoNinguno")?.addEventListener("click", () => checks().forEach(x => x.checked = false));
 });
 </script>
 

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -39,6 +39,18 @@ class CaballoFecha(Base):
         ForeignKey("categorias.id"),
         nullable=False,
         index=True,
+    )
+
+    # Posición operativa del caballo dentro de la carga de la fecha/categoría.
+    # En importación Excel conserva exactamente el orden de las filas.
+    orden_carga: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Preferencia definida al cargar la tanda. Se confirma y puede cambiar
+    # inmediatamente antes de realizar el sorteo.
+    aleatorizar_sorteo: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
     )
 
     caballo = relationship("Caballo")

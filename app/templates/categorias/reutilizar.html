@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Categoría existente{% endblock %}
+{% block page_title %}Categoría existente{% endblock %}
+
+{% block contenido %}
+<nav class="mb-3">
+    <a href="/">Inicio</a> /
+    <a href="/campeonatos">Campeonatos</a> /
+    <a href="/campeonatos/{{ campeonato.id }}">{{ campeonato.nombre }}</a> /
+    <strong>Reutilizar categoría</strong>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="fw-bold mb-3">🏷️ La categoría ya existe</h3>
+                <p>
+                    La categoría <strong>{{ categoria_global.nombre }}</strong> ya está registrada
+                    en el sistema, pero todavía no está agregada a
+                    <strong>{{ campeonato.nombre }}</strong>.
+                </p>
+                <p class="text-muted">
+                    Podés reutilizarla. Se copiará su configuración más reciente y después
+                    podrás editarla para este campeonato sin modificar los campeonatos anteriores.
+                </p>
+
+                <form method="post" action="/categorias/nueva/{{ campeonato.id }}">
+                    <input type="hidden" name="nombre" value="{{ categoria_global.nombre }}">
+                    <input type="hidden" name="descripcion" value="">
+                    <input type="hidden" name="orden" value="10">
+                    <input type="hidden" name="cantidad_montas" value="1">
+                    <input type="hidden" name="tipo_monta" value="">
+                    <input type="hidden" name="reglamento" value="">
+                    <input type="hidden" name="usar_existente" value="1">
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Usar categoría existente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

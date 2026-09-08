@@ -26,7 +26,7 @@
                     <select
                         class="form-select"
                         name="campeonato_id"
-                        onchange="this.form.submit()"
+                        id="campeonatoSorteos"
                     >
                         {% for campeonato in campeonatos %}
                         <option value="{{ campeonato.id }}"
@@ -39,7 +39,7 @@
 
                 <div class="col-md-5">
                     <label class="form-label">Fecha</label>
-                    <select class="form-select" name="fecha_id">
+                    <select class="form-select" name="fecha_id" id="fechaSorteos">
                         {% for fecha in fechas %}
                         <option value="{{ fecha.id }}"
                             {% if fecha_id == fecha.id %}selected{% endif %}>
@@ -243,7 +243,28 @@
                     <input type="hidden" name="modo_reserva" value="solo_2">
                     {% endif %}
 
-                    <button type="submit" class="btn btn-success btn-lg">
+                    <div class="border rounded p-3 mb-3 bg-light">
+                        <div class="fw-bold mb-1">Modo actual de los caballos</div>
+                        <div class="mb-2">
+                            {% if seccion.modo_caballos == "mantener_orden" %}
+                            📋 Mantener orden de carga / Excel
+                            {% else %}
+                            🎲 Aleatorizar al realizar el sorteo
+                            {% endif %}
+                        </div>
+                        <div class="small text-muted">
+                            Los jinetes siempre se sortean aleatoriamente.
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="modo_caballos" value="mantener_actual" class="modo-caballos-input">
+                    <button
+                        type="submit"
+                        class="btn btn-success btn-lg"
+                        data-categoria="{{ seccion.categoria.nombre }}"
+                        data-campeonato="{{ fecha_evento.campeonato.nombre }}"
+                        data-modo-actual="{{ seccion.modo_caballos }}"
+                    >
                         🎲 Realizar sorteo de {{ seccion.categoria.nombre }}
                     </button>
                 </form>
@@ -265,7 +286,7 @@
         <h2 class="h4">Realizando sorteo</h2>
         <div id="mezcla-texto" class="fs-5 mt-3">Preparando...</div>
         <div class="small text-muted mt-2">
-            Jinetes y caballos se mezclan 3 veces por separado.
+            Los jinetes se mezclan 3 veces. Los caballos respetan el modo confirmado.
         </div>
     </div>
 </div>
@@ -275,24 +296,61 @@
 <script>
 document.querySelectorAll(".sorteo-form").forEach((form) => {
     form.addEventListener("submit", (event) => {
-        if (form.dataset.enviando === "1") {
+        if (form.dataset.enviando === "1") return;
+        event.preventDefault();
+
+        const boton = form.querySelector('button[type="submit"]');
+        const categoria = boton?.dataset.categoria || "";
+        const campeonato = boton?.dataset.campeonato || "";
+        const modoActual = boton?.dataset.modoActual || "aleatorizar";
+        const textoModo = modoActual === "mantener_orden"
+            ? "MANTENER EL ORDEN DEL EXCEL"
+            : "ALEATORIZAR LOS CABALLOS";
+
+        const eleccion = window.prompt(
+            `Va a sortear la categoría ${categoria} del campeonato ${campeonato}.\n\n` +
+            `Jinetes: se sortean siempre de forma aleatoria.\n` +
+            `Caballos: el modo actual es ${textoModo}.\n\n` +
+            `1 = Mantener el modo actual\n` +
+            `2 = Mantener orden del Excel\n` +
+            `3 = Aleatorizar caballos\n\n` +
+            `Ingrese 1, 2 o 3. Cancelar no realiza el sorteo.`,
+            "1"
+        );
+
+        if (eleccion === null) return;
+
+        const valor = eleccion.trim();
+        if (!["1", "2", "3"].includes(valor)) {
+            alert("Opción inválida. El sorteo no se realizó.");
             return;
         }
 
-        event.preventDefault();
+        const modoInput = form.querySelector(".modo-caballos-input");
+        modoInput.value = valor === "1"
+            ? "mantener_actual"
+            : (valor === "2" ? "mantener_orden" : "aleatorizar");
 
         const overlay = document.getElementById("mezcla-overlay");
         const texto = document.getElementById("mezcla-texto");
         overlay.classList.remove("d-none");
         overlay.classList.add("d-flex");
 
+        const aleatorizaCaballos =
+            modoInput.value === "aleatorizar" ||
+            (modoInput.value === "mantener_actual" && modoActual === "aleatorizar");
+
         const etapas = [
             "Jinetes · mezcla 1 de 3",
             "Jinetes · mezcla 2 de 3",
             "Jinetes · mezcla 3 de 3",
-            "Caballos · mezcla 1 de 3",
-            "Caballos · mezcla 2 de 3",
-            "Caballos · mezcla 3 de 3",
+            ...(aleatorizaCaballos
+                ? [
+                    "Caballos · mezcla 1 de 3",
+                    "Caballos · mezcla 2 de 3",
+                    "Caballos · mezcla 3 de 3"
+                  ]
+                : ["Caballos · conservando orden de carga"]),
             "Guardando resultado..."
         ];
 
@@ -310,6 +368,24 @@ document.querySelectorAll(".sorteo-form").forEach((form) => {
             texto.textContent = etapas[indice];
         }, 450);
     });
+});</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const campeonato = document.getElementById("campeonatoSorteos");
+    const fecha = document.getElementById("fechaSorteos");
+
+    if (campeonato) {
+        campeonato.addEventListener("change", function () {
+            // Al cambiar de campeonato no enviamos el fecha_id anterior.
+            if (fecha) {
+                fecha.value = "";
+                fecha.disabled = true;
+            }
+            campeonato.form.submit();
+        });
+    }
 });
 </script>
+
 {% endblock %}

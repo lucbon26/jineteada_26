@@ -6,6 +6,37 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+class CategoriaGlobal(Base):
+    """
+    Catálogo global de nombres de categoría.
+
+    La configuración operativa continúa viviendo en Categoria porque puede
+    variar por campeonato, pero varias configuraciones pueden representar
+    la misma categoría global (Bastos, Gurupa, Clina, etc.).
+    """
+    __tablename__ = "categorias_globales"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    nombre: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    creado_en: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+    )
+
+    configuraciones = relationship(
+        "Categoria",
+        back_populates="categoria_global",
+    )
+
+
 class Categoria(Base):
     __tablename__ = "categorias"
 
@@ -17,6 +48,12 @@ class Categoria(Base):
     campeonato_id: Mapped[int] = mapped_column(
         ForeignKey("campeonatos.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+
+    categoria_global_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categorias_globales.id", ondelete="RESTRICT"),
+        nullable=True,
         index=True,
     )
 
@@ -93,4 +130,9 @@ class Categoria(Base):
     campeonato = relationship(
         "Campeonato",
         back_populates="categorias",
+    )
+
+    categoria_global = relationship(
+        "CategoriaGlobal",
+        back_populates="configuraciones",
     )
