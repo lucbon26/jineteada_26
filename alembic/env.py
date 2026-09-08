@@ -13,7 +13,10 @@ config = context.config
 
 # Usa la misma URL de base de datos que la aplicación.
 # Sin .env seguirá usando SQLite; en producción toma DATABASE_URL del .env.
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.DATABASE_URL.replace("%", "%%"),
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
