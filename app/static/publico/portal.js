@@ -30,17 +30,20 @@ document.addEventListener("DOMContentLoaded", function () {
             const dias = Math.floor(diferencia / 86400000);
             const horas = Math.floor((diferencia % 86400000) / 3600000);
             const minutos = Math.floor((diferencia % 3600000) / 60000);
+            const segundos = Math.floor((diferencia % 60000) / 1000);
 
             const days = countdown.querySelector("[data-days]");
             const hours = countdown.querySelector("[data-hours]");
             const minutes = countdown.querySelector("[data-minutes]");
+            const seconds = countdown.querySelector("[data-seconds]");
 
             if (days) days.textContent = String(dias).padStart(2, "0");
             if (hours) hours.textContent = String(horas).padStart(2, "0");
             if (minutes) minutes.textContent = String(minutos).padStart(2, "0");
+            if (seconds) seconds.textContent = String(segundos).padStart(2, "0");
         }
 
         actualizarCuenta();
-        setInterval(actualizarCuenta, 60000);
+        setInterval(actualizarCuenta, 1000);
     }
 });

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import date
+from urllib.parse import parse_qs, urlparse
+import re
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -63,18 +65,62 @@ def proxima_fecha_oficial(
     )
 
 
+def youtube_embed_url(url: str | None) -> str | None:
+    """Convierte enlaces habituales de YouTube a una URL embed segura."""
+    if not url:
+        return None
+
+    try:
+        parsed = urlparse(url.strip())
+        host = parsed.netloc.lower().split(":")[0]
+        path = parsed.path.strip("/")
+        video_id = None
+
+        if host in {"youtu.be", "www.youtu.be"}:
+            video_id = path.split("/")[0] if path else None
+
+        elif host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+            if path == "watch":
+                video_id = parse_qs(parsed.query).get("v", [None])[0]
+            elif path.startswith(("live/", "embed/", "shorts/")):
+                parts = path.split("/")
+                video_id = parts[1] if len(parts) > 1 else None
+
+        if video_id and re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+            return (
+                f"https://www.youtube.com/embed/{video_id}"
+                "?autoplay=1&mute=1&playsinline=1&rel=0"
+            )
+
+    except Exception:
+        return None
+
+    return None
+
+
 @router.get("/", response_class=HTMLResponse)
 def home_publico(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    # Mantiene el flujo actual del login: si un usuario ya inició sesión,
-    # "/" lo lleva al panel interno.
-    if request.session.get("usuario_id"):
-        return RedirectResponse("/panel", status_code=303)
-
     campeonato = campeonato_oficial_actual(db)
     proxima_fecha = proxima_fecha_oficial(campeonato, db)
+
+    youtube_url = None
+    youtube_embed = None
+    contador_objetivo = None
+
+    if proxima_fecha is not None:
+        contador_objetivo = (
+            proxima_fecha.fecha.isoformat() + "T08:00:00-03:00"
+        )
+
+        if (
+            proxima_fecha.youtube_publicar
+            and proxima_fecha.youtube_url
+        ):
+            youtube_url = proxima_fecha.youtube_url
+            youtube_embed = youtube_embed_url(youtube_url)
 
     cantidad_fechas = 0
     cantidad_sorteos_publicados = 0
@@ -107,6 +153,9 @@ def home_publico(
         context={
             "campeonato": campeonato,
             "proxima_fecha": proxima_fecha,
+            "contador_objetivo": contador_objetivo,
+            "youtube_url": youtube_url,
+            "youtube_embed": youtube_embed,
             "cantidad_fechas": cantidad_fechas,
             "cantidad_sorteos_publicados": cantidad_sorteos_publicados,
             "menu_publico": "inicio",

@@ -49,6 +49,17 @@ class Fecha(Base):
 
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    youtube_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    youtube_publicar: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
     creado_en: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

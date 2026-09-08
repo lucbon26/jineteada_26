@@ -42,11 +42,12 @@
 
             <div
                 class="countdown"
-                data-countdown="{{ proxima_fecha.fecha.isoformat() }}T00:00:00"
+                data-countdown="{{ contador_objetivo }}"
             >
                 <div><strong data-days>--</strong><span>Días</span></div>
                 <div><strong data-hours>--</strong><span>Hs</span></div>
                 <div><strong data-minutes>--</strong><span>Min</span></div>
+                <div><strong data-seconds>--</strong><span>Seg</span></div>
             </div>
             {% else %}
             <h2>Próximamente</h2>
@@ -56,7 +57,70 @@
     </div>
 </section>
 
-<section class="quick-strip">
+{% if youtube_url %}
+<section class="live-section">
+    <div class="public-container">
+        <div class="live-card">
+            <div class="live-head">
+                <div>
+                    <div class="live-badge">
+                        <span class="live-dot"></span>
+                        EN VIVO
+                    </div>
+                    <h2>Seguinos en directo por YouTube</h2>
+                    <p class="live-event-meta">
+                        <strong>{{ proxima_fecha.nombre }}</strong>
+                        {% if proxima_fecha.localidad %}
+                        <span>· {{ proxima_fecha.localidad }}</span>
+                        {% endif %}
+                        <span>· {{ proxima_fecha.fecha.strftime("%d/%m/%Y") }}</span>
+                        <span>· 08:00 hs</span>
+                    </p>
+                </div>
+
+                <a
+                    href="{{ youtube_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-public btn-youtube"
+                >
+                    Abrir en YouTube
+                </a>
+            </div>
+
+            {% if youtube_embed %}
+            <div class="live-player">
+                <iframe
+                    src="{{ youtube_embed }}"
+                    title="Transmisión en vivo - Latido de Tradición"
+                    loading="eager"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                ></iframe>
+            </div>
+            {% else %}
+            <div class="live-fallback">
+                <div>
+                    <strong>La transmisión está disponible en YouTube.</strong>
+                    <span>Este enlace no admite reproductor integrado.</span>
+                </div>
+                <a
+                    href="{{ youtube_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-public btn-youtube"
+                >
+                    Ver transmisión
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="quick-strip {% if youtube_url %}quick-strip-after-live{% endif %}">
     <div class="public-container quick-grid">
         <a class="quick-card" href="/campeonato">
             <span class="quick-icon">🏆</span>

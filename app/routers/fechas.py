@@ -139,6 +139,8 @@ def crear_fecha(
     organizador: str = Form(""),
     estado: str = Form("programada"),
     observaciones: str = Form(""),
+    youtube_url: str = Form(""),
+    youtube_publicar: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     campeonato = (
@@ -163,6 +165,8 @@ def crear_fecha(
         organizador=organizador.strip() or None,
         estado=estado,
         observaciones=observaciones.strip() or None,
+        youtube_url=youtube_url.strip() or None,
+        youtube_publicar=bool(youtube_publicar and youtube_url.strip()),
     )
 
     db.add(nueva_fecha)
@@ -213,6 +217,8 @@ def editar_fecha(
     organizador: str = Form(""),
     estado: str = Form("programada"),
     observaciones: str = Form(""),
+    youtube_url: str = Form(""),
+    youtube_publicar: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     fecha_evento = obtener_fecha_o_404(fecha_id, db)
@@ -225,6 +231,10 @@ def editar_fecha(
     fecha_evento.organizador = organizador.strip() or None
     fecha_evento.estado = estado
     fecha_evento.observaciones = observaciones.strip() or None
+    fecha_evento.youtube_url = youtube_url.strip() or None
+    fecha_evento.youtube_publicar = bool(
+        youtube_publicar and youtube_url.strip()
+    )
 
     db.commit()
 

@@ -62,8 +62,11 @@ def login_submit(
 
         rol = normalizar_rol(user.rol)
         destino = destino_seguro(next)
-        if destino == "/" or rol in {"ACREDITACION", "LOCUCION", "TV"}:
+
+        if rol in {"ACREDITACION", "LOCUCION", "TV"}:
             destino = destino_por_rol(rol)
+        elif destino == "/":
+            destino = "/panel"
 
         return RedirectResponse(destino, status_code=303)
 
