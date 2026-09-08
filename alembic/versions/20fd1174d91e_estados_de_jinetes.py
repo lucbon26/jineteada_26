@@ -33,7 +33,7 @@ def upgrade() -> None:
         """
         UPDATE jinetes
         SET estado = CASE
-            WHEN activo = 1 THEN 'activo'
+            WHEN activo THEN 'activo'
             ELSE 'inactivo'
         END
         """
