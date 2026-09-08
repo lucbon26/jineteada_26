@@ -16,6 +16,7 @@ from app.routers import jinetes
 from app.routers import tropillas
 from app.routers import caballos
 from app.routers import caballos_fechas
+from app.routers import publico as publico_router
 
 
 app = FastAPI(
@@ -33,6 +34,7 @@ app.include_router(jinetes.router)
 app.include_router(tropillas.router)
 app.include_router(caballos.router)
 app.include_router(caballos_fechas.router)
+app.include_router(publico_router.router)
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -73,6 +75,21 @@ async def control_accesos(request: Request, call_next):
     request.state.flash_error = request.session.pop("flash_error", None)
     request.state.flash_success = request.session.pop("flash_success", None)
     path = request.url.path
+
+    rutas_publicas = {"/", "/campeonato", "/resultados", "/login"}
+    if (
+        path in rutas_publicas
+        or path.startswith("/publico/sorteos")
+        or path.startswith("/static/")
+    ):
+        return await call_next(request)
+
+    # /panel conserva el dashboard administrativo anterior.
+    if path == "/panel":
+        if not request.session.get("usuario_id"):
+            return RedirectResponse("/login?next=/panel", status_code=303)
+        return await call_next(request)
+
     if acceso_permitido(request):
         return await call_next(request)
 
@@ -109,7 +126,7 @@ def startup_event():
         db.close()
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/panel", response_class=HTMLResponse)
 def dashboard(request: Request):
     """
     Dashboard principal protegido por sesión.

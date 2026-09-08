@@ -1,0 +1,143 @@
+{% extends "publico/base.html" %}
+{% block title %}Latido de Tradición · Campeonato Rionegrino de Jineteada{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-pattern"></div>
+    <div class="public-container hero-content">
+        <div class="hero-copy">
+            <div class="eyebrow">RÍO NEGRO · ARGENTINA</div>
+            <h1>
+                El campo late.<br>
+                <span>La tradición sigue.</span>
+            </h1>
+            <p>
+                Campeonato Rionegrino de Jineteada
+                {% if campeonato %}· {{ campeonato.nombre }}{% endif %}
+            </p>
+
+            <div class="hero-actions">
+                <a class="btn-public btn-primary-public" href="/publico/sorteos">
+                    Ver sorteos
+                </a>
+                <a class="btn-public btn-ghost-public" href="/campeonato">
+                    Conocer el campeonato
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-card">
+            <div class="hero-card-label">PRÓXIMA FECHA</div>
+
+            {% if proxima_fecha %}
+            <div class="hero-date">
+                <strong>{{ proxima_fecha.fecha.strftime("%d") }}</strong>
+                <span>{{ proxima_fecha.fecha.strftime("%m/%Y") }}</span>
+            </div>
+            <h2>{{ proxima_fecha.nombre }}</h2>
+            <p>
+                {{ proxima_fecha.localidad }}
+                {% if proxima_fecha.lugar %} · {{ proxima_fecha.lugar }}{% endif %}
+            </p>
+
+            <div
+                class="countdown"
+                data-countdown="{{ proxima_fecha.fecha.isoformat() }}T00:00:00"
+            >
+                <div><strong data-days>--</strong><span>Días</span></div>
+                <div><strong data-hours>--</strong><span>Hs</span></div>
+                <div><strong data-minutes>--</strong><span>Min</span></div>
+            </div>
+            {% else %}
+            <h2>Próximamente</h2>
+            <p>La próxima fecha será publicada por la organización.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="quick-strip">
+    <div class="public-container quick-grid">
+        <a class="quick-card" href="/campeonato">
+            <span class="quick-icon">🏆</span>
+            <div>
+                <small>EL CAMPEONATO</small>
+                <strong>Reglamento y calendario</strong>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+
+        <a class="quick-card" href="/publico/sorteos">
+            <span class="quick-icon">🎲</span>
+            <div>
+                <small>SORTEOS</small>
+                <strong>Orden de monta publicado</strong>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+
+        <a class="quick-card" href="/resultados">
+            <span class="quick-icon">📊</span>
+            <div>
+                <small>RESULTADOS</small>
+                <strong>Posiciones del torneo</strong>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+    </div>
+</section>
+
+<section class="section-public intro-section">
+    <div class="public-container split-feature">
+        <div>
+            <div class="eyebrow dark">IDENTIDAD RIONEGRINA</div>
+            <h2 class="section-title">
+                Una competencia que mantiene viva nuestra tradición.
+            </h2>
+        </div>
+
+        <div class="intro-copy">
+            {% if campeonato and campeonato.descripcion %}
+            <p>{{ campeonato.descripcion }}</p>
+            {% else %}
+            <p>
+                Jineteadas, tropillas y protagonistas de distintos puntos de
+                Río Negro reunidos en un campeonato pensado para reconocer la
+                destreza, el respeto por el caballo y la cultura de nuestro campo.
+            </p>
+            {% endif %}
+            <a class="text-link" href="/campeonato">Conocer más →</a>
+        </div>
+    </div>
+</section>
+
+<section class="section-public stats-section">
+    <div class="public-container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <strong>{{ cantidad_fechas }}</strong>
+                <span>Fechas del campeonato</span>
+            </div>
+            <div class="stat-card">
+                <strong>3</strong>
+                <span>Categorías tradicionales</span>
+            </div>
+            <div class="stat-card">
+                <strong>{{ cantidad_sorteos_publicados }}</strong>
+                <span>Sorteos publicados</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section-public closing-banner">
+    <div class="public-container closing-inner">
+        <div>
+            <div class="eyebrow">INFORMACIÓN OFICIAL</div>
+            <h2>Todo el campeonato, en un solo lugar.</h2>
+            <p>Consultá fechas, sorteos publicados y resultados.</p>
+        </div>
+        <a href="/campeonato" class="btn-public btn-light-public">Ver campeonato</a>
+    </div>
+</section>
+{% endblock %}

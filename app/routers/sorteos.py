@@ -945,6 +945,7 @@ def sorteos_publicos(
             "fechas": fechas,
             "fecha_id": fecha_id,
             "sorteos": sorteos,
+            "menu_publico": "sorteos",
         },
     )
 

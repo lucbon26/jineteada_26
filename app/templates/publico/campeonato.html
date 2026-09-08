@@ -1,0 +1,113 @@
+{% extends "publico/base.html" %}
+{% block title %}Campeonato · Latido de Tradición{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="public-container">
+        <div class="eyebrow">CAMPEONATO RIONEGRINO</div>
+        <h1>El campeonato</h1>
+        <p>Reglamento, categorías, calendario y toda la información oficial.</p>
+    </div>
+</section>
+
+<section class="section-public">
+    <div class="public-container">
+        {% if campeonato %}
+        <div class="content-grid">
+            <article class="content-main">
+                <div class="section-kicker">EDICIÓN ACTUAL</div>
+                <h2>{{ campeonato.nombre }}</h2>
+                {% if campeonato.descripcion %}
+                <p class="lead-copy">{{ campeonato.descripcion }}</p>
+                {% endif %}
+
+                <div class="info-panel">
+                    <div>
+                        <small>INICIO</small>
+                        <strong>
+                            {% if campeonato.fecha_inicio %}
+                                {{ campeonato.fecha_inicio.strftime("%d/%m/%Y") }}
+                            {% else %}-{% endif %}
+                        </strong>
+                    </div>
+                    <div>
+                        <small>FINAL</small>
+                        <strong>
+                            {% if campeonato.fecha_fin %}
+                                {{ campeonato.fecha_fin.strftime("%d/%m/%Y") }}
+                            {% else %}-{% endif %}
+                        </strong>
+                    </div>
+                    <div>
+                        <small>ESTADO</small>
+                        <strong>{{ campeonato.estado|upper }}</strong>
+                    </div>
+                </div>
+
+                <div class="section-block">
+                    <div class="section-kicker">CATEGORÍAS</div>
+                    <h3>Las modalidades del campeonato</h3>
+                    <div class="category-grid">
+                        {% for categoria in categorias %}
+                        <div class="category-card">
+                            <span>{{ "%02d"|format(loop.index) }}</span>
+                            <strong>{{ categoria.nombre }}</strong>
+                            {% if categoria.descripcion %}
+                            <p>{{ categoria.descripcion }}</p>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="empty-public">Las categorías se publicarán próximamente.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="section-block">
+                    <div class="section-kicker">CALENDARIO</div>
+                    <h3>Fechas del campeonato</h3>
+
+                    <div class="calendar-list">
+                        {% for fecha in fechas %}
+                        <div class="calendar-item">
+                            <div class="calendar-date">
+                                <strong>{{ fecha.fecha.strftime("%d") }}</strong>
+                                <span>{{ fecha.fecha.strftime("%m/%Y") }}</span>
+                            </div>
+                            <div class="calendar-info">
+                                <strong>{{ fecha.nombre }}</strong>
+                                <span>
+                                    {{ fecha.localidad }}
+                                    {% if fecha.lugar %} · {{ fecha.lugar }}{% endif %}
+                                </span>
+                            </div>
+                            <div class="calendar-state">{{ fecha.estado }}</div>
+                        </div>
+                        {% else %}
+                        <div class="empty-public">Todavía no hay fechas publicadas.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+
+            <aside class="content-aside">
+                <div class="aside-card sticky-card">
+                    <div class="aside-icon">📜</div>
+                    <h3>Reglamento oficial</h3>
+                    <p>
+                        En esta sección se publicará el reglamento vigente del
+                        Campeonato Rionegrino de Jineteada.
+                    </p>
+                    <button class="btn-public btn-disabled" type="button" disabled>
+                        Próximamente
+                    </button>
+                </div>
+            </aside>
+        </div>
+        {% else %}
+        <div class="empty-public large">
+            No hay un campeonato oficial publicado en este momento.
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

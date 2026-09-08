@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#101512">
+    <title>{% block title %}Río Negro · Latido de Tradición{% endblock %}</title>
+    <meta
+        name="description"
+        content="Campeonato Rionegrino de Jineteada · Latido de Tradición"
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/publico/portal.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header class="site-header" id="siteHeader">
+    <div class="public-container nav-shell">
+        <a href="/" class="brand" aria-label="Río Negro Latido de Tradición">
+            <img src="/static/publico/logo.png" alt="Río Negro" class="brand-mark">
+            <span class="brand-copy">
+                <strong>Latido de Tradición</strong>
+                <small>Campeonato Rionegrino de Jineteada</small>
+            </span>
+        </a>
+
+        <button
+            class="nav-toggle"
+            id="navToggle"
+            type="button"
+            aria-label="Abrir menú"
+            aria-expanded="false"
+        >
+            <span></span><span></span><span></span>
+        </button>
+
+        <nav class="public-nav" id="publicNav">
+            <a href="/" class="{% if menu_publico == 'inicio' %}active{% endif %}">Inicio</a>
+            <a href="/campeonato" class="{% if menu_publico == 'campeonato' %}active{% endif %}">Campeonato</a>
+            <a href="/resultados" class="{% if menu_publico == 'resultados' %}active{% endif %}">Resultados</a>
+            <a href="/publico/sorteos" class="{% if menu_publico == 'sorteos' %}active{% endif %}">Sorteos</a>
+            <a href="/login" class="nav-system">Sistema</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <div class="public-container footer-grid">
+        <div>
+            <div class="footer-brand">Latido de Tradición</div>
+            <p>Campeonato Rionegrino de Jineteada.</p>
+        </div>
+        <div class="footer-links">
+            <a href="/campeonato">Campeonato</a>
+            <a href="/resultados">Resultados</a>
+            <a href="/publico/sorteos">Sorteos</a>
+            <a href="/login">Sistema</a>
+        </div>
+    </div>
+    <div class="public-container footer-bottom">
+        <span>Río Negro · Argentina</span>
+        <span>Tradición, deporte e identidad.</span>
+    </div>
+</footer>
+
+<script src="/static/publico/portal.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
