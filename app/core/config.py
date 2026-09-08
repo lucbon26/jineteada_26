@@ -28,6 +28,10 @@ class Settings:
         f"sqlite:///{DATA_DIR / 'jineteada.db'}"
     )
 
+    # Sin valor por defecto: la contraseña inicial del MASTER nunca debe
+    # quedar escrita en el código ni en el repositorio.
+    MASTER_INITIAL_PASSWORD: str | None = os.getenv("MASTER_INITIAL_PASSWORD")
+
 
 settings = Settings()
 

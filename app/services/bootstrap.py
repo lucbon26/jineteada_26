@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+
 from app.core.logger import logger
 from app.core.permissions import MASTER_USUARIO
 from app.core.security import hash_password
@@ -22,10 +24,16 @@ def crear_admin_inicial(db: Session) -> None:
             db.commit()
         return
 
+    if not settings.MASTER_INITIAL_PASSWORD:
+        raise RuntimeError(
+            "No existe el usuario MASTER y falta configurar "
+            "MASTER_INITIAL_PASSWORD en el entorno."
+        )
+
     master = Usuario(
         nombre="Administrador",
         usuario=MASTER_USUARIO,
-        password_hash=hash_password("admin123"),
+        password_hash=hash_password(settings.MASTER_INITIAL_PASSWORD),
         rol="MASTER",
         activo=True,
     )
