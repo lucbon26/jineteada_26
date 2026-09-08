@@ -15,9 +15,14 @@ class Base(DeclarativeBase):
 
 # Engine principal de base de datos.
 # Por ahora usamos SQLite local.
+engine_kwargs = {}
+
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    **engine_kwargs,
 )
 
 # Fábrica de sesiones.
