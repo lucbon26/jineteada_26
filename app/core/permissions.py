@@ -19,8 +19,10 @@ def destino_por_rol(rol: str | None) -> str:
     rol = normalizar_rol(rol)
     if rol == "ACREDITACION":
         return "/acreditacion"
-    if rol in {"LOCUCION", "TV"}:
+    if rol == "LOCUCION":
         return "/sorteos"
+    if rol == "TV":
+        return "/tv"
     return "/"
 
 
@@ -28,7 +30,12 @@ def acceso_permitido(request: Request) -> bool:
     path = request.url.path
     metodo = request.method.upper()
 
-    if path in {"/login", "/logout"} or path.startswith("/static/") or path.startswith("/publico/"):
+    if (
+        path in {"/login", "/logout"}
+        or path.startswith("/static/")
+        or path.startswith("/publico/")
+        or path.startswith("/tv/salida/")
+    ):
         return True
 
     if not request.session.get("usuario_id"):
@@ -41,6 +48,11 @@ def acceso_permitido(request: Request) -> bool:
 
     if path.startswith("/usuarios"):
         return False
+
+    # El panel de control TV y su token sólo son visibles para TV/MASTER.
+    # La salida /tv/salida/<token> fue exceptuada arriba para que vMix pueda abrirla.
+    if path == "/tv" or path.startswith("/tv/"):
+        return rol == "TV"
 
     if rol == "ADMIN":
         return True
@@ -59,11 +71,20 @@ def acceso_permitido(request: Request) -> bool:
     if rol == "ACREDITACION":
         return path == "/" or path.startswith("/acreditacion")
 
-    if rol in {"LOCUCION", "TV"}:
+    if rol == "LOCUCION":
         if path == "/":
             return True
         if path.startswith(("/sorteos", "/resultados")):
             return metodo == "GET"
+        return False
+
+    if rol == "TV":
+        if path == "/":
+            return True
+        if path.startswith(("/sorteos", "/resultados")):
+            return metodo == "GET"
+        if path == "/tv" or path.startswith("/tv/"):
+            return True
         return False
 
     return False

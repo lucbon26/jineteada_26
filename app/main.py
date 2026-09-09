@@ -81,6 +81,7 @@ async def control_accesos(request: Request, call_next):
         path in rutas_publicas
         or path.startswith("/publico/sorteos")
         or path.startswith("/static/")
+        or path.startswith("/tv/salida/")
     ):
         return await call_next(request)
 
@@ -162,3 +163,7 @@ app.include_router(acreditacion_router.router)
 from app.routers import sorteos as sorteos_router
 app.include_router(sorteos_router.router)
 app.include_router(sorteos_router.public_router)
+
+# MODULO_TV
+from app.routers import tv as tv_router
+app.include_router(tv_router.router)

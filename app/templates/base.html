@@ -125,6 +125,10 @@
             <a href="#" class="disabled">📊 Resultados</a>
             {% endif %}
 
+            {% if rol in ["MASTER", "TV"] %}
+            <a href="/tv" class="{% if menu_activo == 'tv' %}active{% endif %}">📺 TV</a>
+            {% endif %}
+
             {% if rol == "MASTER" %}
             <hr class="border-secondary">
             <a href="/usuarios" class="{% if menu_activo == 'usuarios' %}active{% endif %}">👥 Usuarios</a>

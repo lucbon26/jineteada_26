@@ -8,3 +8,4 @@ from app.models.caballo import Caballo
 from app.models.caballo_fecha import CaballoFecha
 from app.models.sorteo import Sorteo, SorteoDetalle
 from app.models.sorteo_auditoria import SorteoAuditoria
+from app.models.tv_salida import TvSalida
