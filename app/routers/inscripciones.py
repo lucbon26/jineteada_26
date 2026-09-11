@@ -438,8 +438,9 @@ def detalle_inscripciones_fecha(
 ):
     fecha = obtener_fecha_o_404(fecha_id, db)
 
-    # La autoinscripción ocurre al entrar a una fecha abierta. Es idempotente.
-    preparar_inscripciones_fecha(fecha, db)
+    # Las inscripciones se generan únicamente mediante la acción explícita
+    # "Generar seleccionadas". Esto permite borrar una inscripción sin que
+    # reaparezca automáticamente al volver a abrir la pantalla.
 
     consulta = (
         select(JineteFecha)
@@ -608,6 +609,97 @@ def validar_qr(
             f"/inscripciones/fecha/{fecha_id}"
             "?tipo=success&mensaje="
             f"QR validado: {jinete.apellidos}, {jinete.nombres}. Habilitado para sorteo."
+        ),
+        status_code=303,
+    )
+
+
+@router.post("/fecha/{fecha_id}/inscripcion/{inscripcion_id}/eliminar")
+def eliminar_inscripcion_individual(
+    fecha_id: int,
+    inscripcion_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Elimina sólo la participación del jinete en esta fecha.
+
+    El registro maestro del jinete y su qr_token permanente no se modifican.
+    """
+    fecha = obtener_fecha_o_404(fecha_id, db)
+
+    if fecha.sorteada:
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=danger&mensaje=No se puede eliminar la inscripción: "
+                "la fecha ya fue sorteada."
+            ),
+            status_code=303,
+        )
+
+    inscripcion = db.get(JineteFecha, inscripcion_id)
+    if inscripcion is None or inscripcion.fecha_id != fecha.id:
+        raise HTTPException(status_code=404, detail="Inscripción no encontrada.")
+
+    jinete = db.get(Jinete, inscripcion.jinete_id)
+    nombre = (
+        f"{jinete.apellidos}, {jinete.nombres}"
+        if jinete is not None
+        else "el jinete seleccionado"
+    )
+
+    db.delete(inscripcion)
+    db.commit()
+
+    return RedirectResponse(
+        url=(
+            f"/inscripciones/fecha/{fecha_id}"
+            f"?tipo=success&mensaje=Se eliminó la inscripción de {nombre}. "
+            "El jinete y su QR permanente no fueron modificados."
+        ),
+        status_code=303,
+    )
+
+
+@router.post("/fecha/{fecha_id}/eliminar-todas")
+def eliminar_inscripciones_fecha(
+    fecha_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Elimina todas las participaciones de una fecha no sorteada.
+
+    No elimina jinetes, preinscripciones al campeonato ni códigos QR.
+    Para volver a crearlas se usa luego la generación explícita desde el
+    panel de Inscripciones.
+    """
+    fecha = obtener_fecha_o_404(fecha_id, db)
+
+    if fecha.sorteada:
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=danger&mensaje=No se pueden eliminar las inscripciones: "
+                "la fecha ya fue sorteada."
+            ),
+            status_code=303,
+        )
+
+    inscripciones = db.scalars(
+        select(JineteFecha).where(JineteFecha.fecha_id == fecha.id)
+    ).all()
+
+    cantidad = len(inscripciones)
+    for inscripcion in inscripciones:
+        db.delete(inscripcion)
+
+    db.commit()
+
+    return RedirectResponse(
+        url=(
+            f"/inscripciones/fecha/{fecha_id}"
+            f"?tipo=success&mensaje=Se eliminaron {cantidad} inscripción(es) "
+            "de esta fecha. Los jinetes y sus QR permanentes no fueron modificados."
         ),
         status_code=303,
     )

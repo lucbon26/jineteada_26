@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import unicodedata
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -10,31 +9,29 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import normalizar_rol
 from app.models.campeonato import Campeonato
 from app.models.categoria import Categoria
 from app.models.fecha import Fecha
 from app.models.jinete import Jinete
 from app.models.jinete_fecha import JineteFecha
-from app.routers.inscripciones import obtener_inscripcion, preparar_inscripciones_fecha
+from app.routers.inscripciones import obtener_inscripcion
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/acreditacion", tags=["Acreditación"])
 
 
-def normalizar_rol(valor: str | None) -> str:
-    texto = (valor or "").strip().lower()
-    return "".join(
-        c for c in unicodedata.normalize("NFD", texto)
-        if unicodedata.category(c) != "Mn"
-    )
-
-
 def usuario_puede_acreditar(request: Request) -> bool:
+    """Usa la misma normalización de roles que el middleware global.
+
+    Evita que el router aplique una segunda lista de permisos distinta a la
+    definida por la aplicación (el MASTER quedaba rechazado aquí).
+    """
     return normalizar_rol(request.session.get("usuario_rol")) in {
-        "admin",
-        "administrador",
-        "secretaria",
-        "acreditacion",
+        "MASTER",
+        "ADMIN",
+        "SECRETARIA",
+        "ACREDITACION",
     }
 
 
@@ -100,9 +97,6 @@ def pantalla_acreditacion(
             and campeonato_id > 0
             and fecha_seleccionada.campeonato_id == campeonato_id
         ):
-            if not fecha_seleccionada.inscripcion_cerrada:
-                preparar_inscripciones_fecha(fecha_seleccionada, db)
-
             inscripciones = db.scalars(
                 select(JineteFecha).where(
                     JineteFecha.fecha_id == fecha_seleccionada.id
@@ -174,8 +168,6 @@ def validar_desde_celular(
             "No se admiten más acreditaciones para esta fecha.",
             "cerrada",
         )
-
-    preparar_inscripciones_fecha(fecha, db)
 
     valor = codigo.strip()
     if valor.upper().startswith("JINETE:"):

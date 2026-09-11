@@ -91,7 +91,19 @@
                                 <td>{{ r.get('ausente', 0) }}</td>
                                 <td>{{ r.get('no_habilitado', 0) }}</td>
                                 <td class="text-end">
-                                    <a href="/inscripciones/fecha/{{ fecha.id }}" class="btn btn-sm btn-outline-primary">Abrir</a>
+                                    <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                        <a href="/inscripciones/fecha/{{ fecha.id }}" class="btn btn-sm btn-outline-primary">Abrir</a>
+                                        {% if r.get('total', 0) > 0 %}
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            formaction="/inscripciones/fecha/{{ fecha.id }}/eliminar-todas"
+                                            formmethod="post"
+                                            {% if fecha.sorteada %}disabled title="No se puede eliminar porque la fecha ya fue sorteada"{% endif %}
+                                            onclick="return confirm('¿Seguro que querés eliminar TODAS las inscripciones de {{ fecha.nombre }}?\n\nNo se borrarán los jinetes ni se modificarán sus QR permanentes.');"
+                                        >Eliminar todas</button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% else %}
