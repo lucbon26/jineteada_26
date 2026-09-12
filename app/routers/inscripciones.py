@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from io import BytesIO
 import secrets
 import unicodedata
@@ -37,6 +38,26 @@ ESTADOS_INSCRIPCION = {
     "no_habilitado",
 }
 
+
+
+
+ZONA_HORARIA_LOCAL = ZoneInfo("America/Argentina/Buenos_Aires")
+
+
+def fecha_hora_local(valor: datetime | None) -> datetime | None:
+    if valor is None:
+        return None
+    if valor.tzinfo is None:
+        return valor.replace(tzinfo=ZONA_HORARIA_LOCAL)
+    return valor.astimezone(ZONA_HORARIA_LOCAL)
+
+
+def hora_local(valor: datetime | None) -> str:
+    local = fecha_hora_local(valor)
+    return local.strftime("%H:%M") if local else ""
+
+
+templates.env.filters["hora_local"] = hora_local
 
 def obtener_fecha_o_404(fecha_id: int, db: Session) -> Fecha:
     fecha = db.get(Fecha, fecha_id)
@@ -557,11 +578,7 @@ def validar_qr(
         )
 
     if inscripcion.estado == "validado":
-        hora = (
-            inscripcion.validado_en.strftime("%H:%M")
-            if inscripcion.validado_en
-            else ""
-        )
+        hora = hora_local(inscripcion.validado_en)
         return RedirectResponse(
             url=(
                 f"/inscripciones/fecha/{fecha_id}"

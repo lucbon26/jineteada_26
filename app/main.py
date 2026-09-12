@@ -80,6 +80,7 @@ async def control_accesos(request: Request, call_next):
     if (
         path in rutas_publicas
         or path.startswith("/publico/sorteos")
+        or path.startswith("/publico/resultados")
         or path.startswith("/static/")
         or path.startswith("/tv/salida/")
     ):
@@ -159,6 +160,14 @@ app.include_router(inscripciones_router.router)
 from app.routers import acreditacion as acreditacion_router
 app.include_router(acreditacion_router.router)
 
+# MODULO_RESULTADOS
+# Se registra ANTES que Sorteos porque /sorteos/{sorteo_id} es una ruta dinámica.
+# Así /sorteos/resultados se resuelve como ruta fija y no intenta interpretar
+# "resultados" como si fuera un ID entero de sorteo.
+from app.routers import resultados as resultados_router
+app.include_router(resultados_router.router)
+app.include_router(resultados_router.public_router)
+
 # MODULO8_SORTEOS
 from app.routers import sorteos as sorteos_router
 app.include_router(sorteos_router.router)
@@ -167,3 +176,4 @@ app.include_router(sorteos_router.public_router)
 # MODULO_TV
 from app.routers import tv as tv_router
 app.include_router(tv_router.router)
+

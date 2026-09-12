@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Resultados{% endblock %}
+{% block page_title %}Resultados{% endblock %}
+{% block contenido %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Resultados</h1>
+            <p class="text-muted mb-0">Carga basada en el sorteo oficial. Nada se publica automáticamente.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="/sorteos/resultados" class="row g-3 align-items-end">
+                <div class="col-lg-4">
+                    <label class="form-label">Campeonato</label>
+                    <select class="form-select" name="campeonato_id" onchange="this.form.submit()">
+                        {% for c in campeonatos %}<option value="{{ c.id }}" {% if c.id == campeonato_id %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label">Fecha</label>
+                    <select class="form-select" name="fecha_id" onchange="this.form.submit()">
+                        {% for f in fechas %}<option value="{{ f.id }}" {% if f.id == fecha_id %}selected{% endif %}>{{ f.fecha.strftime('%d/%m/%Y') }} · {{ f.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-select" name="categoria_id" onchange="this.form.submit()">
+                        {% for c in categorias %}<option value="{{ c.id }}" {% if c.id == categoria_id %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if sorteo %}
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <strong>{{ sorteo.categoria.nombre }}</strong>
+                        <div class="small text-muted">{{ sorteo.fecha.nombre }} · sorteo oficial #{{ sorteo.id }}</div>
+                    </div>
+                    {% if resultado %}
+                        {% set estado = resultado.estado %}
+                        <span class="badge {% if estado == 'publicado' %}text-bg-success{% elif estado == 'finalizado' %}text-bg-primary{% else %}text-bg-secondary{% endif %}">{{ estado|upper }}</span>
+                    {% else %}
+                        <span class="badge text-bg-light">SIN CARGA</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a class="btn btn-outline-success" href="/sorteos/resultados/excel?sorteo_id={{ sorteo.id }}">⬇ Exportar Excel</a>
+                        {% if rol in ['MASTER','ADMIN'] and (not resultado or resultado.estado == 'borrador') %}
+                        <form method="post" action="/sorteos/resultados/importar" enctype="multipart/form-data" class="d-flex flex-wrap gap-2">
+                            <input type="hidden" name="sorteo_id" value="{{ sorteo.id }}">
+                            <input class="form-control" style="max-width:300px" type="file" name="archivo" accept=".xlsx" required>
+                            <button class="btn btn-success" type="submit">⬆ Importar Excel</button>
+                        </form>
+                        {% endif %}
+                    </div>
+
+                    {% if resultado and rol in ['MASTER','ADMIN'] %}
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        {% if resultado.estado == 'borrador' %}
+                        <form method="post" action="/sorteos/resultados/{{ resultado.id }}/finalizar" onsubmit="return confirm('¿Finalizar esta categoría? Después podrá publicarse.');"><button class="btn btn-primary">Finalizar categoría</button></form>
+                        {% elif resultado.estado == 'finalizado' %}
+                        <form method="post" action="/sorteos/resultados/{{ resultado.id }}/publicar" onsubmit="return confirm('¿Publicar estos resultados en el portal público?');"><button class="btn btn-success">Publicar</button></form>
+                        <form method="post" action="/sorteos/resultados/{{ resultado.id }}/reabrir" onsubmit="return confirm('¿Volver el resultado a borrador para corregirlo?');"><button class="btn btn-outline-warning">Reabrir</button></form>
+                        {% elif resultado.estado == 'publicado' %}
+                        <form method="post" action="/sorteos/resultados/{{ resultado.id }}/despublicar" onsubmit="return confirm('¿Retirar estos resultados del portal público?');"><button class="btn btn-outline-danger">Despublicar</button></form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead><tr><th>Orden</th><th>Palenque</th><th>Jinete</th><th>Localidad</th><th>Caballo</th><th>Tropilla</th><th class="text-end">Puntos</th><th>Observaciones</th></tr></thead>
+                            <tbody>
+                            {% for fila in filas %}
+                                <tr>
+                                    <td>{{ fila.detalle.orden }}</td><td>{{ fila.detalle.palenque or '-' }}</td><td><strong>{{ fila.detalle.jinete_nombre }}</strong></td><td>{{ fila.detalle.jinete_localidad or '-' }}</td><td>{{ fila.detalle.caballo_nombre }}</td><td>{{ fila.detalle.tropilla_nombre or '-' }}</td><td class="text-end">{{ fila.puntos if fila.puntos is not none else '-' }}</td><td>{{ fila.observaciones or '' }}</td>
+                                </tr>
+                            {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No hay montas oficiales en este sorteo.</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white"><strong>Posiciones internas del campeonato</strong></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead><tr><th>Pos.</th><th>Jinete</th><th class="text-end">Puntos</th></tr></thead>
+                            <tbody>
+                            {% for p in posiciones %}<tr><td><strong>{{ p.posicion }}</strong></td><td>{{ p.jinete }}<div class="small text-muted">{{ p.localidad }}</div></td><td class="text-end"><strong>{{ '%.2f'|format(p.puntos) }}</strong></td></tr>
+                            {% else %}<tr><td colspan="3" class="text-center text-muted py-4">Todavía no hay categorías finalizadas para computar posiciones.</td></tr>{% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No hay un sorteo oficial disponible para la selección actual.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -177,7 +177,7 @@ def datos_categoria(
 
     cantidad_validados = len(jinetes_validados)
     cantidad_caballos = len(caballos)
-    minimo = cantidad_validados + 2
+    minimo = cantidad_validados + 3
     faltantes = max(0, minimo - cantidad_caballos)
     excedentes_sobre_minimo = max(0, cantidad_caballos - minimo)
 
@@ -542,7 +542,7 @@ def realizar_sorteo(
     fecha_id: int,
     categoria_id: int,
     request: Request,
-    modo_reserva: str = Form(default="solo_2"),
+    modo_reserva: str = Form(default="solo_3"),
     modo_caballos: str = Form(default="mantener_actual"),
     db: Session = Depends(get_db),
 ):
@@ -583,12 +583,12 @@ def realizar_sorteo(
             detail="No hay jinetes validados para sortear.",
         )
 
-    if len(caballos) < len(jinetes) + 2:
+    if len(caballos) < len(jinetes) + 3:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Faltan {len(jinetes) + 2 - len(caballos)} "
-                "caballo(s). Se requieren los jinetes validados + 2 reservas."
+                f"Faltan {len(jinetes) + 3 - len(caballos)} "
+                "caballo(s). Se requieren los jinetes validados + 3 reservas."
             ),
         )
 
@@ -614,7 +614,7 @@ def realizar_sorteo(
     if modo_reserva == "todos":
         cantidad_total_caballos = len(caballos_mezclados)
     else:
-        cantidad_total_caballos = len(jinetes_mezclados) + 2
+        cantidad_total_caballos = len(jinetes_mezclados) + 3
 
     caballos_seleccionados = caballos_mezclados[:cantidad_total_caballos]
     cantidad_reservas = cantidad_total_caballos - len(jinetes_mezclados)

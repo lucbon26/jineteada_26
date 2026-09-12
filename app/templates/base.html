@@ -122,7 +122,7 @@
 
             {% if rol in ["MASTER", "ADMIN", "SECRETARIA", "LOCUCION", "TV"] %}
             <a href="/sorteos" class="{% if menu_activo == 'sorteos' %}active{% endif %}">🎲 Sorteos</a>
-            <a href="#" class="disabled">📊 Resultados</a>
+            <a href="/sorteos/resultados" class="{% if menu_activo == 'resultados' %}active{% endif %}">📊 Resultados</a>
             {% endif %}
 
             {% if rol in ["MASTER", "TV"] %}

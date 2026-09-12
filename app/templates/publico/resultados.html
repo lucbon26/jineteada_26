@@ -6,27 +6,61 @@
     <div class="public-container">
         <div class="eyebrow">RESULTADOS OFICIALES</div>
         <h1>Resultados</h1>
-        <p>Clasificaciones por fecha, categoría y tabla general del campeonato.</p>
+        <p>Clasificación oficial del campeonato, separada por categoría.</p>
     </div>
 </section>
 
 <section class="section-public">
     <div class="public-container">
-        <div class="coming-card">
-            <div class="coming-icon">📊</div>
-            <div>
-                <div class="section-kicker">PRÓXIMAMENTE</div>
-                <h2>Estamos preparando los resultados oficiales.</h2>
-                <p>
-                    Cuando el módulo de resultados esté habilitado vas a poder
-                    consultar las posiciones por fecha y la clasificación general
-                    del campeonato desde esta misma página.
-                </p>
-                <a href="/publico/sorteos" class="btn-public btn-primary-public">
-                    Mientras tanto, ver sorteos
-                </a>
-            </div>
+        <div class="result-filters" id="filtros-resultados" style="display:none">
+            <div><label for="resultado-campeonato">Campeonato</label><select id="resultado-campeonato"></select></div>
+            <div><label for="resultado-categoria">Categoría</label><select id="resultado-categoria"></select></div>
+        </div>
+        <div id="resultados-publicos">
+            <div class="coming-card"><div class="coming-icon">📊</div><div><div class="section-kicker">CARGANDO</div><h2>Consultando resultados oficiales…</h2></div></div>
         </div>
     </div>
 </section>
+
+<style>
+.result-filters{display:grid;grid-template-columns:1fr 1fr;gap:16px;background:#fff;border:1px solid rgba(16,24,32,.12);border-radius:18px;padding:20px;margin-bottom:24px}.result-filters label{display:block;font-weight:800;margin-bottom:7px}.result-filters select{width:100%;padding:11px 12px;border:1px solid rgba(16,24,32,.18);border-radius:10px;background:#fff;font:inherit}@media(max-width:720px){.result-filters{grid-template-columns:1fr}}.result-block{background:#fff;border:1px solid rgba(16,24,32,.12);border-radius:18px;padding:24px;margin-bottom:24px;box-shadow:0 10px 30px rgba(16,24,32,.06)}
+.result-block h2,.result-block h3{margin-top:0}.result-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}.result-chip{border:1px solid rgba(16,24,32,.15);border-radius:999px;padding:7px 12px;font-size:.9rem;background:#f7f8f9}.result-table{width:100%;border-collapse:collapse}.result-table th,.result-table td{padding:10px 8px;border-bottom:1px solid rgba(16,24,32,.09);text-align:left}.result-table th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:#5c6670}.result-table td.num,.result-table th.num{text-align:right}.result-position{font-weight:900}.result-muted{color:#6d7780;font-size:.9rem}.result-date{margin-top:22px;padding-top:18px;border-top:1px solid rgba(16,24,32,.1)}
+@media(max-width:720px){.result-block{padding:16px}.result-table{font-size:.88rem}.hide-mobile{display:none}.result-table th,.result-table td{padding:8px 5px}}
+</style>
+
+<script>
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function puntos(v){return v==null?'-':Number(v).toFixed(2);}
+function tablaPosiciones(lista){if(!lista.length)return '<p class="result-muted">Todavía no hay posiciones publicadas para esta categoría.</p>';return `<div style="overflow:auto"><table class="result-table"><thead><tr><th>Pos.</th><th>Jinete</th><th class="hide-mobile">Localidad</th><th class="num">Puntos</th></tr></thead><tbody>${lista.map(x=>`<tr><td class="result-position">${esc(x.posicion)}</td><td>${esc(x.jinete)}</td><td class="hide-mobile result-muted">${esc(x.localidad)}</td><td class="num"><strong>${puntos(x.puntos)}</strong></td></tr>`).join('')}</tbody></table></div>`;}
+function tablaFecha(lista){if(!lista.length)return '<p class="result-muted">Sin resultados.</p>';return `<div style="overflow:auto"><table class="result-table"><thead><tr><th>Pos.</th><th>Jinete</th><th class="hide-mobile">Caballo</th><th class="num">Puntos</th><th class="hide-mobile">Observaciones</th></tr></thead><tbody>${lista.map(x=>`<tr><td>${x.posicion??'-'}</td><td><strong>${esc(x.jinete)}</strong><div class="result-muted">${esc(x.localidad)}</div></td><td class="hide-mobile">${esc(x.caballo)}</td><td class="num"><strong>${puntos(x.puntos)}</strong></td><td class="hide-mobile">${esc(x.observaciones)}</td></tr>`).join('')}</tbody></table></div>`;}
+let datosResultados=null;
+function mostrarSeleccion(){
+ const csel=document.getElementById('resultado-campeonato'), ksel=document.getElementById('resultado-categoria'), cont=document.getElementById('resultados-publicos');
+ const c=(datosResultados.campeonatos||[]).find(x=>String(x.id)===csel.value);
+ const k=(c?.categorias||[]).find(x=>String(x.id)===ksel.value);
+ if(!k){cont.innerHTML='<div class="coming-card"><div><h2>No hay categorías publicadas.</h2></div></div>';return;}
+ cont.innerHTML=`<div class="result-block"><div class="section-kicker">CAMPEONATO</div><h2>${esc(c.nombre)}</h2><div style="margin-top:24px"><h3>${esc(k.nombre)}</h3>${tablaPosiciones(k.posiciones||[])}</div></div>`;
+}
+function cargarCategorias(){
+ const csel=document.getElementById('resultado-campeonato'), ksel=document.getElementById('resultado-categoria');
+ const c=(datosResultados.campeonatos||[]).find(x=>String(x.id)===csel.value);
+ ksel.innerHTML=(c?.categorias||[]).map(x=>`<option value="${x.id}">${esc(x.nombre)}</option>`).join('');
+ mostrarSeleccion();
+}
+async function cargar(){
+ const cont=document.getElementById('resultados-publicos');
+ try{
+  const r=await fetch('/publico/resultados/datos',{cache:'no-store'});if(!r.ok)throw new Error();
+  datosResultados=await r.json();
+  if(!(datosResultados.campeonatos||[]).length){cont.innerHTML='<div class="coming-card"><div class="coming-icon">📊</div><div><h2>Todavía no hay resultados publicados.</h2></div></div>';return;}
+  document.getElementById('filtros-resultados').style.display='grid';
+  const csel=document.getElementById('resultado-campeonato');
+  csel.innerHTML=datosResultados.campeonatos.map(x=>`<option value="${x.id}">${esc(x.nombre)}</option>`).join('');
+  csel.addEventListener('change',cargarCategorias);
+  document.getElementById('resultado-categoria').addEventListener('change',mostrarSeleccion);
+  cargarCategorias();
+ }catch(e){cont.innerHTML='<div class="coming-card"><div class="coming-icon">⚠️</div><div><h2>No pudimos cargar los resultados.</h2></div></div>';}
+}
+cargar();
+</script>
 {% endblock %}

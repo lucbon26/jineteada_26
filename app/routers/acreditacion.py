@@ -15,7 +15,7 @@ from app.models.categoria import Categoria
 from app.models.fecha import Fecha
 from app.models.jinete import Jinete
 from app.models.jinete_fecha import JineteFecha
-from app.routers.inscripciones import obtener_inscripcion
+from app.routers.inscripciones import hora_local, obtener_inscripcion
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/acreditacion", tags=["Acreditación"])
@@ -216,10 +216,7 @@ def validar_desde_celular(
     categoria_nombre = categoria.nombre if categoria else ""
 
     if inscripcion.estado == "validado":
-        hora = (
-            inscripcion.validado_en.strftime("%H:%M")
-            if inscripcion.validado_en else ""
-        )
+        hora = hora_local(inscripcion.validado_en)
         return JSONResponse(
             content={
                 "ok": False,
@@ -263,6 +260,6 @@ def validar_desde_celular(
             "mensaje": "Habilitado para sorteo.",
             "jinete": nombre,
             "categoria": categoria_nombre,
-            "hora": inscripcion.validado_en.strftime("%H:%M"),
+            "hora": hora_local(inscripcion.validado_en),
         }
     )

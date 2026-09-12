@@ -137,7 +137,7 @@
                             </td>
                             <td>
                                 {% if inscripcion.validado_en %}
-                                {{ inscripcion.validado_en.strftime('%H:%M') }}
+                                {{ inscripcion.validado_en|hora_local }}
                                 <div class="small text-muted">{{ inscripcion.validado_por or '' }}</div>
                                 {% else %}-{% endif %}
                             </td>
