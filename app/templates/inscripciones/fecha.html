@@ -43,7 +43,52 @@
         {% if fecha_evento.inscripcion_cerrada_en %}
         Cierre: {{ fecha_evento.inscripcion_cerrada_en.strftime('%d/%m/%Y %H:%M') }}.
         {% endif %}
+        {% if categorias_alta_manual %}
+        <div class="mt-2">
+            <strong>Excepción operativa:</strong> todavía se pueden realizar altas manuales
+            en las categorías que aún no fueron sorteadas. Esto no reabre la inscripción general.
+        </div>
+        {% endif %}
     </div>
+
+    {% if categorias_alta_manual %}
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-body">
+            <h5 class="card-title mb-1">Alta manual con inscripción cerrada</h5>
+            <p class="text-muted small mb-3">
+                Uso excepcional. Sólo aparecen jinetes activos del campeonato que todavía no están
+                inscriptos en esta fecha y cuya categoría aún no fue sorteada. Al agregarlos quedan
+                <strong>validados y habilitados para el sorteo</strong>.
+            </p>
+
+            {% if jinetes_alta_manual %}
+            <form method="post" action="/inscripciones/fecha/{{ fecha_evento.id }}/alta-manual"
+                  class="row g-2 align-items-end"
+                  onsubmit="return confirm('¿Agregar este jinete manualmente? Quedará validado y habilitado para el sorteo pendiente.');">
+                <div class="col-md-9">
+                    <label class="form-label">Jinete</label>
+                    <select name="jinete_campeonato_id" class="form-select" required>
+                        <option value="">Seleccionar...</option>
+                        {% for item in jinetes_alta_manual %}
+                        <option value="{{ item.jinete_campeonato_id }}">
+                            {{ item.categoria.nombre }} · {{ item.jinete.apellidos }}, {{ item.jinete.nombres }}
+                            {% if item.jinete.localidad %} · {{ item.jinete.localidad }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-warning w-100">Agregar y validar</button>
+                </div>
+            </form>
+            {% else %}
+            <div class="alert alert-light border mb-0">
+                No hay jinetes activos pendientes de alta manual en las categorías todavía no sorteadas.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 
     <div class="row g-3 mb-4">

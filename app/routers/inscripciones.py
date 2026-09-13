@@ -21,6 +21,7 @@ from app.models.fecha import Fecha
 from app.models.jinete import Jinete
 from app.models.jinete_campeonato import JineteCampeonato
 from app.models.jinete_fecha import JineteFecha
+from app.models.sorteo import Sorteo
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -76,6 +77,23 @@ def obtener_inscripcion(
             JineteFecha.jinete_id == jinete_id,
             JineteFecha.fecha_id == fecha_id,
         )
+    )
+
+
+def categoria_ya_sorteada(
+    fecha_id: int,
+    categoria_id: int,
+    db: Session,
+) -> bool:
+    """Indica si ya existe el sorteo oficial para Fecha + Categoría."""
+    return (
+        db.scalar(
+            select(Sorteo.id).where(
+                Sorteo.fecha_id == fecha_id,
+                Sorteo.categoria_id == categoria_id,
+            )
+        )
+        is not None
     )
 
 
@@ -501,6 +519,55 @@ def detalle_inscripciones_fecha(
         .order_by(Categoria.orden.asc(), Categoria.nombre.asc())
     ).all()
 
+    # Excepción operativa: una fecha puede tener la inscripción general cerrada
+    # y, aun así, admitir un alta manual si la categoría todavía no fue sorteada.
+    categorias_sorteadas_ids = set(
+        db.scalars(
+            select(Sorteo.categoria_id).where(Sorteo.fecha_id == fecha.id)
+        ).all()
+    )
+    categorias_alta_manual = [
+        categoria
+        for categoria in categorias
+        if categoria.id not in categorias_sorteadas_ids
+    ]
+
+    jinetes_alta_manual = []
+    if fecha.inscripcion_cerrada and categorias_alta_manual:
+        categorias_disponibles_ids = [c.id for c in categorias_alta_manual]
+        ya_inscriptos_ids = set(
+            db.scalars(
+                select(JineteFecha.jinete_id).where(JineteFecha.fecha_id == fecha.id)
+            ).all()
+        )
+
+        preinscriptos_alta = db.execute(
+            select(JineteCampeonato, Jinete, Categoria)
+            .join(Jinete, Jinete.id == JineteCampeonato.jinete_id)
+            .join(Categoria, Categoria.id == JineteCampeonato.categoria_id)
+            .where(
+                JineteCampeonato.campeonato_id == fecha.campeonato_id,
+                JineteCampeonato.categoria_id.in_(categorias_disponibles_ids),
+                Jinete.estado == "activo",
+            )
+            .order_by(
+                Categoria.orden.asc(),
+                Categoria.nombre.asc(),
+                Jinete.apellidos.asc(),
+                Jinete.nombres.asc(),
+            )
+        ).all()
+
+        jinetes_alta_manual = [
+            {
+                "jinete_campeonato_id": pre.id,
+                "jinete": jinete,
+                "categoria": categoria,
+            }
+            for pre, jinete, categoria in preinscriptos_alta
+            if jinete.id not in ya_inscriptos_ids
+        ]
+
     resumen = {
         "total": len(todas),
         "pendiente": sum(1 for x in todas if x.estado == "pendiente"),
@@ -516,6 +583,8 @@ def detalle_inscripciones_fecha(
             "fecha_evento": fecha,
             "inscripciones": inscripciones,
             "categorias": categorias,
+            "categorias_alta_manual": categorias_alta_manual,
+            "jinetes_alta_manual": jinetes_alta_manual,
             "buscar": buscar,
             "categoria_id": categoria_id,
             "estado_filtro": estado,
@@ -528,6 +597,110 @@ def detalle_inscripciones_fecha(
                 "Administrador",
             ),
         },
+    )
+
+
+@router.post("/fecha/{fecha_id}/alta-manual")
+def alta_manual_inscripcion_cerrada(
+    fecha_id: int,
+    request: Request,
+    jinete_campeonato_id: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Alta excepcional luego del cierre, sólo antes del sorteo de la categoría.
+
+    No reabre la inscripción general ni la inscripción online. El jinete se
+    registra como validado porque el alta es presencial/manual y debe quedar
+    habilitado inmediatamente para el sorteo pendiente.
+    """
+    fecha = obtener_fecha_o_404(fecha_id, db)
+
+    if not fecha.inscripcion_cerrada:
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=warning&mensaje=La inscripción todavía está abierta; "
+                "utilizá el flujo normal de inscripción."
+            ),
+            status_code=303,
+        )
+
+    pre = db.get(JineteCampeonato, jinete_campeonato_id)
+    if (
+        pre is None
+        or pre.campeonato_id != fecha.campeonato_id
+        or pre.categoria_id is None
+    ):
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=danger&mensaje=El jinete seleccionado no pertenece "
+                "a este campeonato o no tiene categoría asignada."
+            ),
+            status_code=303,
+        )
+
+    if categoria_ya_sorteada(fecha.id, pre.categoria_id, db):
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=danger&mensaje=No se puede agregar el jinete: "
+                "esa categoría ya fue sorteada."
+            ),
+            status_code=303,
+        )
+
+    jinete = db.get(Jinete, pre.jinete_id)
+    if jinete is None:
+        raise HTTPException(status_code=404, detail="Jinete no encontrado.")
+
+    if jinete.estado != "activo":
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=danger&mensaje=No se puede agregar el jinete porque "
+                f"su estado actual es {jinete.estado}."
+            ),
+            status_code=303,
+        )
+
+    existente = obtener_inscripcion(jinete.id, fecha.id, db)
+    if existente is not None:
+        return RedirectResponse(
+            url=(
+                f"/inscripciones/fecha/{fecha_id}"
+                "?tipo=warning&mensaje=El jinete ya está inscripto en esta fecha."
+            ),
+            status_code=303,
+        )
+
+    asegurar_qr_token(jinete, db)
+
+    db.add(
+        JineteFecha(
+            jinete_id=jinete.id,
+            fecha_id=fecha.id,
+            categoria_id=pre.categoria_id,
+            estado="validado",
+            validado_en=datetime.utcnow(),
+            validado_por=request.session.get(
+                "usuario_nombre",
+                "Administrador",
+            ),
+            motivo_no_habilitado=None,
+            observaciones="Alta manual posterior al cierre de inscripción.",
+        )
+    )
+    db.commit()
+
+    return RedirectResponse(
+        url=(
+            f"/inscripciones/fecha/{fecha_id}"
+            "?tipo=success&mensaje="
+            f"Alta manual realizada: {jinete.apellidos}, {jinete.nombres}. "
+            "Quedó validado y habilitado para el sorteo pendiente."
+        ),
+        status_code=303,
     )
 
 
