@@ -345,13 +345,13 @@ class ReglasTest(unittest.TestCase):
         factory=sessionmaker(bind=self.engine)
         with patch.object(script,'SessionLocal',factory), patch('sys.argv',['recalcular']), redirect_stdout(io.StringIO()) as output:
             script.main()
-        self.assertEqual(json.loads(output.getvalue())['reactivados'],[])
+        self.assertEqual(json.loads(output.getvalue())['reparados'],[{'id': self.jinetes[0].id, 'nombre': self.jinetes[0].nombre_completo, 'estado_anterior': 'descalificado', 'causa_anterior': 'historica_sin_causa', 'categorias': [{'categoria_id': self.cat.id, 'estado': 'repechaje', 'causa': 'puntos_f1_f2'}]}, {'id': self.jinetes[3].id, 'nombre': self.jinetes[3].nombre_completo, 'estado_anterior': 'descalificado', 'causa_anterior': 'historica_sin_causa', 'categorias': [{'categoria_id': self.cat.id, 'estado': 'activo', 'causa': 'puntos_f1_f2'}]}])
         self.db.expire_all();self.assertTrue(all(p.estado_clasificacion is None for p in self.pres))
         with patch.object(script,'SessionLocal',factory), patch('sys.argv',['recalcular','--aplicar','--confirmar-origen-puntos',*[str(j.id) for j in self.jinetes]]), redirect_stdout(io.StringIO()) as output:
             script.main()
         self.db.expire_all()
-        self.assertEqual([j.estado for j in self.jinetes],['activo','descalificado','descalificado','descalificado'])
-        self.assertEqual(json.loads(output.getvalue())['reactivados'],[self.jinetes[0].id])
+        self.assertEqual([j.estado for j in self.jinetes],['activo','descalificado','descalificado','activo'])
+        self.assertEqual([x['id'] for x in json.loads(output.getvalue())['reparados']],[self.jinetes[0].id,self.jinetes[3].id])
 
     def test_tv_migracion_legacy_y_cuatro_salidas(self):
         c=self.carga(1,[1]*4)

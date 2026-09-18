@@ -1,72 +1,116 @@
-"""Vista previa por defecto. --aplicar guarda; causas desconocidas requieren revisión."""
+"""Recalcula clasificación y repara estados históricos de forma conservadora.
+
+Por defecto sólo simula. ``--aplicar`` persiste cambios. Una descalificación
+con causa explícita (ausencias, suspensión, manual, etc.) nunca se levanta.
+Los registros ``historica_sin_causa`` sólo se reactivan cuando la clasificación
+actual da ACTIVO o REPECHAJE y no existe evidencia independiente de sanción.
+"""
 import argparse
 import json
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from sqlalchemy import select
 from app.core.database import SessionLocal
 import app.models
 from app.models.jinete import Jinete
 from app.models.jinete_fecha import JineteFecha
 from app.models.categoria import Categoria
-from app.services.clasificacion import evaluar_categoria, recalcular_categoria, fechas_oficiales, puntos_carga
-from app.models.resultado import ResultadoCategoria
-from app.models.sorteo import Sorteo
+from app.services.clasificacion import evaluar_categoria, recalcular_categoria, fechas_oficiales
+
+CAUSAS_REPARABLES = {"historica_sin_causa", "puntos_legacy"}
+MOTIVOS_SANCION = {"suspendido", "sancion", "manual", "inactivo"}
 
 
-def afectado_por_regla_anterior(db, pre):
-    fechas = fechas_oficiales(db, pre.campeonato_id)[:2]
-    if len(fechas) != 2:
-        return False
-    total = 0
-    for fecha in fechas:
-        carga = db.scalar(select(ResultadoCategoria).join(Sorteo).where(
-            Sorteo.fecha_id == fecha.id, Sorteo.categoria_id == pre.categoria_id,
-            ResultadoCategoria.estado.in_(['finalizado', 'publicado'])))
-        puntos = puntos_carga(carga)
-        if puntos is None:
-            return False
-        total += puntos.get(pre.jinete_id, 0)
-    return 0 < total < 5
+def evidencia_sancion_independiente(db, jinete):
+    """Devuelve evidencias que impiden levantar el estado maestro."""
+    evidencias = []
+    participaciones = db.scalars(select(JineteFecha).where(JineteFecha.jinete_id == jinete.id)).all()
+    campeonatos = {p.fecha.campeonato_id for p in participaciones if p.fecha is not None}
+    estados_por_fecha = {p.fecha_id: p.estado for p in participaciones}
+    for campeonato_id in sorted(campeonatos):
+        racha = 0
+        max_racha = 0
+        for fecha in fechas_oficiales(db, campeonato_id):
+            if not fecha.inscripcion_cerrada:
+                racha = 0
+                continue
+            racha = racha + 1 if estados_por_fecha.get(fecha.id) == "ausente" else 0
+            max_racha = max(max_racha, racha)
+        if max_racha >= 2:
+            evidencias.append(f"2_ausencias_consecutivas:campeonato_{campeonato_id}")
+    for p in participaciones:
+        motivo = (p.motivo_no_habilitado or "").strip().lower()
+        if motivo in MOTIVOS_SANCION:
+            evidencias.append(f"{motivo}:fecha_{p.fecha_id}")
+    return sorted(set(evidencias))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--aplicar', action='store_true')
-    parser.add_argument('--confirmar-origen-puntos', type=int, nargs='*', default=[], metavar='ID')
+    parser.add_argument("--aplicar", action="store_true")
+    # Compatibilidad: permite revisar una causa NULL puntual, pero jamás salta protecciones.
+    parser.add_argument("--confirmar-origen-puntos", type=int, nargs="*", default=[], metavar="ID")
     args = parser.parse_args()
-    reporte = {'modo': 'aplicar' if args.aplicar else 'simulacion', 'categorias': [], 'revision_manual': [], 'reactivados': []}
+    reporte = {
+        "modo": "aplicar" if args.aplicar else "simulacion",
+        "categorias": [],
+        "reparados": [],
+        "conservados": [],
+        "revision_manual": [],
+    }
     with SessionLocal() as db:
+        # Primero guardar/recalcular el estado deportivo por campeonato y categoría.
         for cat in db.scalars(select(Categoria)).all():
             calculados = evaluar_categoria(db, cat.campeonato_id, cat.id)
-            reporte['categorias'].append({'id': cat.id, 'estados': calculados})
+            reporte["categorias"].append({"id": cat.id, "estados": calculados})
             recalcular_categoria(db, cat.campeonato_id, cat.id)
-        for jinete in db.scalars(select(Jinete).where(Jinete.estado == 'descalificado')).all():
-            origen_confirmado = jinete.estado_causa == 'puntos_legacy' or (
-                jinete.id in args.confirmar_origen_puntos and jinete.estado_causa in {None, 'historica_sin_causa'})
-            # Incluso con confirmación, proteger cualquier evidencia de otras sanciones.
-            participaciones = db.scalars(select(JineteFecha).where(JineteFecha.jinete_id == jinete.id)).all()
-            ausencias = sum(p.estado == 'ausente' for p in participaciones)
-            sancion = ausencias >= 2 or any(p.motivo_no_habilitado in {'suspendido', 'sancion', 'manual'} for p in participaciones)
-            candidatas = [pre for pre in jinete.campeonatos if pre.estado_clasificacion in {'activo', 'repechaje'} and afectado_por_regla_anterior(db, pre)]
-            if origen_confirmado and not sancion and candidatas:
-                jinete.estado = 'activo'
-                jinete.estado_causa = 'correccion_puntos_legacy'
-                reporte['reactivados'].append(jinete.id)
-            else:
-                reporte['revision_manual'].append({
-                    'id': jinete.id, 'nombre': jinete.nombre_completo,
-                    'causa': jinete.estado_causa, 'evidencia_sancion': sancion,
-                    'candidato_vieja_regla_puntos': bool(candidatas),
-                    'categorias_afectadas': [pre.categoria_id for pre in candidatas],
+
+        for jinete in db.scalars(select(Jinete).where(Jinete.estado == "descalificado")).all():
+            causa = jinete.estado_causa
+            reparable = causa in CAUSAS_REPARABLES or (causa is None and jinete.id in args.confirmar_origen_puntos)
+            candidatas = [
+                pre for pre in jinete.campeonatos
+                if pre.estado_clasificacion in {"activo", "repechaje"}
+            ]
+            evidencias = evidencia_sancion_independiente(db, jinete)
+
+            if reparable and candidatas and not evidencias:
+                anterior = jinete.estado
+                jinete.estado = "activo"
+                jinete.estado_causa = "correccion_historica_clasificacion"
+                reporte["reparados"].append({
+                    "id": jinete.id,
+                    "nombre": jinete.nombre_completo,
+                    "estado_anterior": anterior,
+                    "causa_anterior": causa,
+                    "categorias": [
+                        {"categoria_id": pre.categoria_id, "estado": pre.estado_clasificacion, "causa": pre.causa_clasificacion}
+                        for pre in candidatas
+                    ],
                 })
+            elif causa not in CAUSAS_REPARABLES and causa is not None:
+                reporte["conservados"].append({"id": jinete.id, "causa": causa})
+            elif reparable and evidencias:
+                reporte["revision_manual"].append({
+                    "id": jinete.id, "nombre": jinete.nombre_completo,
+                    "causa": causa, "evidencia_sancion": evidencias,
+                    "estados_calculados": [
+                        {"categoria_id": pre.categoria_id, "estado": pre.estado_clasificacion}
+                        for pre in candidatas
+                    ],
+                })
+            elif reparable and not candidatas:
+                # Cero puntos / base incompleta / descalificación deportiva vigente: no reactivar.
+                reporte["conservados"].append({"id": jinete.id, "causa": causa, "motivo": "sin_estado_activo_o_repechaje"})
+
         if args.aplicar:
             db.commit()
         else:
             db.rollback()
-    print(json.dumps(reporte, ensure_ascii=False, indent=2))
+    print(json.dumps(reporte, ensure_ascii=False, indent=2, default=str))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
