@@ -85,28 +85,34 @@ def candidatos_repechaje(totales):
     return {jid for jid, total in (totales or {}).items() if 0 < total < POLITICA.minimo_directo}
 
 
-def puntos_repechaje_confirmados(db, categoria_id, totales, firma):
-    planilla = db.get(RepechajeCategoria, categoria_id)
-    if not planilla or planilla.estado != 'confirmado' or planilla.base_firma != firma:
+def puntos_repechaje_confirmados(db, campeonato_id, categoria_id, totales, solo_publicados=False):
+    """Devuelve los puntos de F3 para quienes llegaron a repechaje.
+
+    F3 ES el repechaje: no existe una planilla previa independiente. Mientras F3
+    no tenga una carga completa/finalizada (o publicada para la web), devuelve
+    None y esos jinetes conservan estado ``repechaje``.
+    """
+    fechas = fechas_oficiales(db, campeonato_id)
+    if len(fechas) < 3:
         return None
-    try:
-        valores = json.loads(planilla.puntos_json)
-        if set(valores) != {str(jid) for jid in candidatos_repechaje(totales)}:
-            return None
-        puntos = {int(jid): Decimal(valor) for jid, valor in valores.items()}
-        if any(not p.is_finite() or p < 0 for p in puntos.values()):
-            return None
-        return puntos
-    except (ValueError, TypeError, ArithmeticError):
+    permitidos = {'publicado'} if solo_publicados else {'finalizado', 'publicado'}
+    carga = db.scalar(select(ResultadoCategoria).join(Sorteo).where(
+        Sorteo.fecha_id == fechas[2].id,
+        Sorteo.categoria_id == categoria_id,
+        ResultadoCategoria.estado.in_(permitidos),
+    ))
+    puntos = puntos_carga(carga)
+    if puntos is None:
         return None
+    return {jid: puntos.get(jid, Decimal('0')) for jid in candidatos_repechaje(totales)}
 
 
 def evaluar_categoria(db, campeonato_id, categoria_id, solo_publicados=False):
     totales, firma = base_categoria(db, campeonato_id, categoria_id, solo_publicados)
     if totales is None:
         return {}
-    repechaje = puntos_repechaje_confirmados(db, categoria_id, totales, firma) or {}
-    return {jid: POLITICA.resolver(total, repechaje.get(jid)) for jid, total in totales.items()}
+    puntos_f3 = puntos_repechaje_confirmados(db, campeonato_id, categoria_id, totales, solo_publicados)
+    return {jid: POLITICA.resolver(total, None if puntos_f3 is None else puntos_f3.get(jid)) for jid, total in totales.items()}
 
 
 def es_f3_o_posterior(db, fecha):
@@ -120,8 +126,9 @@ def bloqueo_sorteo(db, fecha, categoria):
     totales, firma = base_categoria(db, fecha.campeonato_id, categoria.id)
     if totales is None:
         return 'Primero completá y finalizá los resultados de F1 y F2 de esta categoría.'
-    if candidatos_repechaje(totales) and puntos_repechaje_confirmados(db, categoria.id, totales, firma) is None:
-        return 'Repechaje pendiente: cargá y confirmá su planilla antes de sortear F3.'
+    fechas = fechas_oficiales(db, fecha.campeonato_id)
+    if len(fechas) >= 4 and fecha.id != fechas[2].id and puntos_repechaje_confirmados(db, fecha.campeonato_id, categoria.id, totales) is None:
+        return 'Primero completá y finalizá los resultados de F3 (repechaje) antes de sortear una fecha posterior.'
     return None
 
 
@@ -145,8 +152,23 @@ def recalcular_categoria(db, campeonato_id, categoria_id):
     return cambios
 
 
+def bloqueo_maestro(jinete):
+    """Estados administrativos/deportivos independientes que sí bloquean.
+
+    ``historica_sin_causa`` y ``puntos_legacy`` son residuos de la regla vieja y
+    no deben imponerse sobre la clasificación por campeonato/categoría.
+    """
+    if jinete is None:
+        return True
+    if jinete.estado == 'activo':
+        return False
+    if jinete.estado == 'descalificado' and jinete.estado_causa in {'historica_sin_causa', 'puntos_legacy'}:
+        return False
+    return True
+
+
 def habilitado(db, jinete, fecha, categoria_id, *, para_sorteo=False):
-    if jinete is None or jinete.estado != 'activo':
+    if bloqueo_maestro(jinete):
         return False
     categoria = db.get(Categoria, categoria_id)
     if categoria and not categoria.puntua_campeonato:
@@ -155,9 +177,11 @@ def habilitado(db, jinete, fecha, categoria_id, *, para_sorteo=False):
     if estado == 'descalificado':
         return False
     if es_f3_o_posterior(db, fecha):
-        if estado == 'repechaje' and not para_sorteo:
-            # Asistencia provisional en F3 mientras se disputa el repechaje.
-            return fecha.id == fechas_oficiales(db, fecha.campeonato_id)[2].id
+        fechas = fechas_oficiales(db, fecha.campeonato_id)
+        if fecha.id == fechas[2].id:
+            # F3 es el repechaje: entran directos (>=5) y repechaje (0<p<5).
+            return estado in {'activo', 'repechaje'}
+        # Desde F4 sólo siguen los directos y quienes obtuvieron >0 en F3.
         return estado == 'activo'
     return True
 
@@ -198,7 +222,7 @@ def estados_publicos(db, campeonato_id, categoria_id):
         JineteCampeonato.campeonato_id == campeonato_id,
         JineteCampeonato.categoria_id == categoria_id)).all():
         jinete = pre.jinete
-        if jinete.estado != 'activo':
+        if bloqueo_maestro(jinete):
             salida[jinete.id] = jinete.estado.upper()
         else:
             salida[jinete.id] = etiquetas.get(calculados.get(jinete.id, (None, None))[0], 'EN COMPETENCIA')

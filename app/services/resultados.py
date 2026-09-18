@@ -61,7 +61,7 @@ def posiciones_campeonato(
 
     totales, firma = base_categoria(db, campeonato_id, categoria_id, solo_publicados=True)
     repechaje_confirmado = totales is not None and puntos_repechaje_confirmados(
-        db, categoria_id, totales, firma
+        db, campeonato_id, categoria_id, totales, solo_publicados
     ) is not None
     ordenadas = sorted(
         acumulado.values(),
