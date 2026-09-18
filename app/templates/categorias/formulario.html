@@ -168,6 +168,7 @@ Configuración de categoría
                                 placeholder="Condiciones particulares de esta categoría">{{ categoria.reglamento if categoria and categoria.reglamento else '' }}</textarea>
                         </div>
 
+                        <div class="mb-4"><label class="form-label">Equipamiento público</label><textarea name="equipamiento" class="form-control" rows="4">{{ categoria.equipamiento or '' if categoria else '' }}</textarea><div class="form-text">Descripción y tipo de monta también se muestran en el portal como descripción y modalidad.</div></div>
                         <div class="d-flex justify-content-between">
 
                             <a href="/campeonatos/{{ campeonato.id }}" class="btn btn-outline-secondary">

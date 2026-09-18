@@ -9,3 +9,12 @@ from app.models.caballo_fecha import CaballoFecha
 from app.models.sorteo import Sorteo, SorteoDetalle
 from app.models.sorteo_auditoria import SorteoAuditoria
 from app.models.tv_salida import TvSalida
+from app.models.repechaje import RepechajeCategoria
+
+from app.models.jinete_campeonato import JineteCampeonato
+
+from app.models.jinete_fecha import JineteFecha
+
+from app.models.resultado import ResultadoCategoria, ResultadoDetalle
+
+from app.models.caballo_historial import CaballoHistorial

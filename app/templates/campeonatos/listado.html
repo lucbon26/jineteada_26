@@ -98,12 +98,12 @@ Campeonatos
                                 Editar
                             </a>
 
-                            <form method="post" action="/campeonatos/{{ campeonato.id }}/eliminar" class="d-inline"
-                                onsubmit="return confirm('¿Seguro que querés eliminar este campeonato?');">
+                            {% if request.session.get('usuario_rol', '')|upper in ['ADMIN', 'MASTER'] %}<form method="post" action="/campeonatos/{{ campeonato.id }}/eliminar" class="d-inline"
+                                onsubmit="return confirm('¿Eliminar este campeonato y sus fechas, sorteos, resultados e inscripciones? No se puede deshacer.');">
                                 <button type="submit" class="btn btn-outline-danger btn-sm">
                                     Eliminar
                                 </button>
-                            </form>
+                            </form>{% endif %}
                         </td>
                     </tr>
                     {% endfor %}

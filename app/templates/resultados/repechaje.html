@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block page_title %}Repechaje previo a F3{% endblock %}
+{% block contenido %}
+<h1 class="h3">Repechaje · {{ categoria.nombre }}</h1>
+<p>{{ categoria.campeonato.nombre }} · Instancia independiente, previa a la Fecha 3.</p>
+<div class="alert alert-info">Participan quienes sumaron más de 0 y menos de 5 puntos en F1+F2. En este repechaje: <strong>más de 0 pasa; 0 queda eliminado</strong>. Sus puntos no se suman al campeonato. Las sanciones por ausencias u otros motivos siguen vigentes.</div>
+<a href="/sorteos/resultados?campeonato_id={{ categoria.campeonato_id }}&categoria_id={{ categoria.id }}" class="btn btn-outline-secondary mb-3">Volver a Resultados</a>
+{% if bloqueado %}<div class="alert alert-warning">Ya hay un sorteo de F3 o posterior: esta planilla queda en lectura. Si debe corregirse, revisá primero ese sorteo.</div>{% endif %}
+{% if planilla and not vigente %}<div class="alert alert-warning">Cambió la base de F1/F2. La planilla anterior no habilita el sorteo: cargá y confirmá nuevamente con los participantes actuales.</div>{% endif %}
+{% if totales is none %}<div class="alert alert-warning">Primero completá y finalizá F1 y F2 de esta categoría.</div>
+{% elif not jinetes %}<div class="alert alert-success">No hay participantes en repechaje para esta categoría.</div>
+{% else %}
+<p><strong>{{ planilla.estado|upper if vigente else 'PENDIENTE' }}</strong>{% if vigente and planilla.confirmado_en %} · Confirmado por {{ planilla.confirmado_por }}{% endif %}</p>
+<div class="d-flex flex-wrap gap-2 mb-3"><a class="btn btn-outline-success" href="/sorteos/resultados/repechaje/{{ categoria.id }}/excel">Exportar planilla Excel</a>
+{% if edita and not bloqueado and not (vigente and planilla.estado == 'confirmado') %}<form method="post" enctype="multipart/form-data" action="/sorteos/resultados/repechaje/{{ categoria.id }}/importar" class="d-flex gap-2"><input type="file" name="archivo" accept=".xlsx" class="form-control" required><button class="btn btn-success">Importar borrador</button></form>{% endif %}</div>
+<form method="post" action="/sorteos/resultados/repechaje/{{ categoria.id }}"><input type="hidden" name="firma" value="{{ firma }}">
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Jinete</th><th>F1+F2</th><th>Puntos repechaje</th><th>Resultado</th><th>Estado maestro</th></tr></thead><tbody>
+{% for j in jinetes %}{% set valor = puntos.get(j.id|string) %}<tr><td>{{ j.apellidos }}, {{ j.nombres }}</td><td>{{ totales[j.id] }}</td><td><input class="form-control" type="number" name="puntos_{{ j.id }}" min="0" max="99999999.99" step="0.01" value="{{ valor if valor is not none else '' }}" {% if not edita or bloqueado or (vigente and planilla.estado == 'confirmado') %}disabled{% endif %}></td><td>{% if vigente and planilla.estado == 'confirmado' %}{{ 'PASA A F3' if valor|float > 0 else 'ELIMINADO' }}{% else %}PENDIENTE DE CONFIRMACIÓN{% endif %}</td><td>{{ j.estado|upper }}{% if j.estado != 'activo' %} · No habilitado{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if edita and not bloqueado and not (vigente and planilla.estado == 'confirmado') %}<button class="btn btn-outline-primary" name="accion" value="guardar">Guardar borrador</button> <button class="btn btn-primary" name="accion" value="confirmar" onclick="return confirm('¿Confirmar el repechaje completo? Más de 0 pasa; 0 queda eliminado.');">Confirmar repechaje</button>{% endif %}</form>
+{% if edita and not bloqueado and vigente and planilla.estado == 'confirmado' %}<form method="post" action="/sorteos/resultados/repechaje/{{ categoria.id }}/reabrir" class="mt-3"><button class="btn btn-outline-warning">Reabrir para corregir (bloquea F3)</button></form>{% endif %}
+{% endif %}
+{% endblock %}

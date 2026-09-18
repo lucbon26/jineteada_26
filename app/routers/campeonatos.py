@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -119,6 +120,10 @@ def crear_campeonato(
     fecha_fin: str = Form(""),
     estado: str = Form("borrador"),
     modo_prueba: str | None = Form(None),
+    informacion_publica: str = Form(""),
+    reglamento_publico: str = Form(""),
+    documento_url: str = Form(""),
+    publicado: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     """
@@ -128,6 +133,9 @@ def crear_campeonato(
     if not usuario_autenticado(request):
         return RedirectResponse("/login", status_code=303)
 
+    documento_url = documento_url.strip()
+    if documento_url and (urlparse(documento_url).scheme != "https" or not urlparse(documento_url).netloc or len(documento_url) > 500):
+        raise HTTPException(status_code=400, detail="El documento debe tener un enlace HTTPS válido de hasta 500 caracteres.")
     nombre = nombre.strip()
     descripcion = descripcion.strip()
 
@@ -171,6 +179,10 @@ def crear_campeonato(
     campeonato = Campeonato(
         nombre=nombre,
         descripcion=descripcion or None,
+        informacion_publica=informacion_publica.strip() or None,
+        reglamento_publico=reglamento_publico.strip() or None,
+        documento_url=documento_url or None,
+        publicado=publicado,
         fecha_inicio=fecha_inicio_convertida,
         fecha_fin=fecha_fin_convertida,
         estado=estado,
@@ -228,6 +240,10 @@ def editar_campeonato(
     fecha_fin: str = Form(""),
     estado: str = Form("borrador"),
     modo_prueba: str | None = Form(None),
+    informacion_publica: str = Form(""),
+    reglamento_publico: str = Form(""),
+    documento_url: str = Form(""),
+    publicado: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     """
@@ -245,6 +261,9 @@ def editar_campeonato(
             status_code=303,
         )
 
+    documento_url = documento_url.strip()
+    if documento_url and (urlparse(documento_url).scheme != "https" or not urlparse(documento_url).netloc or len(documento_url) > 500):
+        raise HTTPException(status_code=400, detail="El documento debe tener un enlace HTTPS válido de hasta 500 caracteres.")
     nombre = nombre.strip()
     descripcion = descripcion.strip()
 
@@ -287,6 +306,10 @@ def editar_campeonato(
 
     campeonato.nombre = nombre
     campeonato.descripcion = descripcion or None
+    campeonato.informacion_publica = informacion_publica.strip() or None
+    campeonato.reglamento_publico = reglamento_publico.strip() or None
+    campeonato.documento_url = documento_url or None
+    campeonato.publicado = publicado
     campeonato.fecha_inicio = fecha_inicio_convertida
     campeonato.fecha_fin = fecha_fin_convertida
     campeonato.estado = estado
@@ -302,32 +325,15 @@ def editar_campeonato(
 
 @router.post("/{campeonato_id}/eliminar")
 def eliminar_campeonato(campeonato_id: int, request: Request, db: Session = Depends(get_db)):
-    if not usuario_autenticado(request):
-        return RedirectResponse("/login", status_code=303)
-    if not usuario_es_master(request):
-        raise HTTPException(status_code=403, detail="Acceso exclusivo MASTER.")
-
-    campeonato = db.get(Campeonato, campeonato_id)
-    if campeonato is None:
-        return RedirectResponse("/campeonatos", status_code=303)
-    if not campeonato.modo_prueba:
-        raise HTTPException(status_code=400, detail="Un campeonato real no puede eliminarse desde esta opción.")
-
-    fecha_ids = list(db.scalars(select(Fecha.id).where(Fecha.campeonato_id == campeonato_id)).all())
-    if fecha_ids:
-        sorteo_ids = list(db.scalars(select(Sorteo.id).where(Sorteo.fecha_id.in_(fecha_ids))).all())
-        if sorteo_ids:
-            db.execute(delete(SorteoDetalle).where(SorteoDetalle.sorteo_id.in_(sorteo_ids)))
-        db.execute(delete(SorteoAuditoria).where(SorteoAuditoria.fecha_id.in_(fecha_ids)))
-        db.execute(delete(Sorteo).where(Sorteo.fecha_id.in_(fecha_ids)))
-        db.execute(delete(CaballoFecha).where(CaballoFecha.fecha_id.in_(fecha_ids)))
-        db.execute(delete(JineteFecha).where(JineteFecha.fecha_id.in_(fecha_ids)))
-
-    db.execute(delete(CaballoHistorial).where(CaballoHistorial.campeonato_id == campeonato_id))
-    db.execute(delete(JineteCampeonato).where(JineteCampeonato.campeonato_id == campeonato_id))
-    db.delete(campeonato)
+    from app.services.eliminacion import exigir_borrado, borrar_campeonato
+    exigir_borrado(request)
+    if db.get(Campeonato, campeonato_id) is None:
+        return RedirectResponse('/campeonatos', status_code=303)
+    borrar_campeonato(db, campeonato_id)
     db.commit()
-    return RedirectResponse("/campeonatos?prueba_eliminada=1", status_code=303)
+    request.session['flash_success'] = 'Campeonato eliminado. Los padrones de jinetes y caballos se conservaron.'
+    return RedirectResponse('/campeonatos', status_code=303)
+
 
 
 @router.get("/{campeonato_id}", response_class=HTMLResponse)

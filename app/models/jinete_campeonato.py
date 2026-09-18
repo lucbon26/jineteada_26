@@ -1,7 +1,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -29,6 +29,10 @@ class JineteCampeonato(Base):
         nullable=True,
         index=True,
     )
+
+    estado_clasificacion: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    causa_clasificacion: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    categoria_clasificacion_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     creado_en: Mapped[datetime] = mapped_column(
         DateTime,

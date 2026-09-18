@@ -60,12 +60,13 @@ def exigir_operador_tv(request: Request) -> None:
 
 
 def obtener_o_crear_salida(db: Session) -> TvSalida:
-    salida = db.scalar(select(TvSalida).order_by(TvSalida.id.asc()))
+    salida = db.scalar(select(TvSalida).order_by(TvSalida.id.asc()).with_for_update())
     if salida is None:
         salida = TvSalida(token=secrets.token_urlsafe(32), escena="oculto")
         db.add(salida)
         db.commit()
         db.refresh(salida)
+    inicializar_buses(db, salida)
     return salida
 
 
@@ -246,6 +247,7 @@ def al_aire(salida: TvSalida, tipo: str) -> bool:
 @router.get("", response_class=HTMLResponse)
 def panel_tv(
     request: Request,
+    tab: str = Query(default="graph"),
     campeonato_id: int | None = Query(default=None),
     fecha_id: int | None = Query(default=None),
     categoria_id: int | None = Query(default=None),
@@ -253,6 +255,12 @@ def panel_tv(
 ):
     exigir_operador_tv(request)
     salida = obtener_o_crear_salida(db)
+    if campeonato_id is None and fecha_id is None and categoria_id is None:
+        guardado = json.loads(getattr(salida, f"{tab if tab in TIPOS_SALIDA else 'graph'}_pvw"))
+        fecha_guardada = db.get(Fecha, guardado.get('fecha_id')) if guardado.get('fecha_id') else None
+        if fecha_guardada:
+            campeonato_id, fecha_id = fecha_guardada.campeonato_id, fecha_guardada.id
+            categoria_id = guardado.get('categoria_id')
     campeonatos, fechas, categorias, sorteo, campeonato_id, fecha_id, categoria_id = contexto_seleccion(
         db, campeonato_id, fecha_id, categoria_id
     )
@@ -281,6 +289,10 @@ def panel_tv(
         request=request,
         name="tv/panel.html",
         context={
+            "tab": tab if tab in TIPOS_SALIDA else "graph",
+            "pvws": {t: json.loads(getattr(salida, f"{t}_pvw")) for t in TIPOS_SALIDA},
+            "pgms": {t: json.loads(getattr(salida, f"{t}_pgm")) for t in TIPOS_SALIDA},
+            "defaults": DEFAULTS,
             "menu_activo": "tv",
             "usuario_nombre": request.session.get("usuario_nombre", "TV"),
             "salida": salida,
@@ -343,6 +355,7 @@ def preparar_graph(
         salida.graph_override_caballo = caballo[:160] if caballo else None
 
     salida.actualizado_en = datetime.utcnow()
+    guardar_preview(db, salida, "graph")
     db.commit()
     request.session["flash_success"] = "Graph preparado. La salida al aire no se modificó."
     return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
@@ -371,6 +384,7 @@ def guardar_override_graph(
     caballo = (override_caballo or "").strip()
     salida.graph_override_caballo = caballo[:160] if caballo else None
     salida.actualizado_en = datetime.utcnow()
+    guardar_preview(db, salida, "graph")
     db.commit()
     request.session["flash_success"] = "Corrección puntual de TV actualizada."
     return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
@@ -397,6 +411,7 @@ def guardar_palenques_tv(
         return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
     guardar_palenques_activos(salida, categoria_id, activos)
     salida.actualizado_en = datetime.utcnow()
+    guardar_preview(db, salida, "graph")
     db.commit()
     request.session["flash_success"] = "Palenques operativos de TV guardados para esta categoría."
     return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
@@ -429,14 +444,15 @@ def preparar_salida(
     if detalle_id:
         detalle = db.get(SorteoDetalle, detalle_id)
         if detalle is not None and detalle.sorteo_id == sorteo.id and not detalle.es_reserva:
-            salida.detalle_id = detalle.id
+            detalle_id = detalle.id
     salida.tabla_pagina = max(1, tabla_pagina)
     salida.tabla_auto = tabla_auto == "on"
     salida.ticker_cantidad = min(20, max(1, ticker_cantidad))
     salida.actualizado_en = datetime.utcnow()
+    guardar_preview(db, salida, tipo, detalle_id)
     db.commit()
     request.session["flash_success"] = f"{tipo.title()} preparado. La salida al aire no se modificó."
-    return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
+    return RedirectResponse(url_panel_para_sorteo(sorteo) + "&tab=" + tipo, status_code=303)
 
 
 @router.post("/salida/{tipo}/aire")
@@ -457,72 +473,56 @@ def cambiar_aire(
         "sorteo": "tabla_sorteo_al_aire",
         "campeonato": "tabla_campeonato_al_aire",
     }[tipo]
-    setattr(salida, attr, bool(activo))
+    if activo != 1:
+        raise HTTPException(status_code=400, detail="Para limpiar PGM, vaciá PVW y pulsá MANDAR AL AIRE.")
+    payload = json.loads(getattr(salida, f"{tipo}_pvw"))
+    payload['al_aire'] = bool(payload['visible'])
+    payload['actualizado_en'] = datetime.utcnow().isoformat()
+    setattr(salida, f"{tipo}_pgm", json.dumps(payload, ensure_ascii=False))
+    setattr(salida, attr, payload['visible'])
     salida.actualizado_en = datetime.utcnow()
     db.commit()
     request.session["flash_success"] = f"{tipo.title()} {'al aire' if activo else 'fuera del aire'}."
     sorteo = db.get(Sorteo, sorteo_id) if sorteo_id else None
-    return RedirectResponse(url_panel_para_sorteo(sorteo), status_code=303)
+    return RedirectResponse("/tv?tab=" + tipo, status_code=303)
+
+
+LIMITES = {
+    "graph_nombre_px": (28, 90), "graph_detalle_px": (18, 60), "graph_ancho_px": (700, 1750),
+    "graph_left_px": (0, 1100), "graph_bottom_px": (0, 700),
+    "ticker_fuente_px": (18, 56), "ticker_alto_px": (60, 180), "ticker_bottom_px": (0, 500), "ticker_velocidad_seg": (6, 120),
+    "tabla_fuente_px": (18, 48), "tabla_filas": (4, 12), "tabla_rotacion_seg": (3, 60),
+}
 
 
 @router.post("/configuracion")
-def guardar_configuracion(
-    request: Request,
-    graph_color_principal: str = Form(...), graph_color_fondo: str = Form(...), graph_color_texto: str = Form(...), graph_color_secundario: str = Form(...),
-    graph_nombre_px: int = Form(...), graph_detalle_px: int = Form(...), graph_ancho_px: int = Form(...), graph_left_px: int = Form(...), graph_bottom_px: int = Form(...),
-    ticker_color_fondo: str = Form(...), ticker_color_texto: str = Form(...), ticker_color_acento: str = Form(...), ticker_fuente_px: int = Form(...), ticker_alto_px: int = Form(...), ticker_bottom_px: int = Form(...), ticker_velocidad_seg: int = Form(...),
-    tabla_color_fondo: str = Form(...), tabla_color_texto: str = Form(...), tabla_color_acento: str = Form(...), tabla_fuente_px: int = Form(...), tabla_filas: int = Form(...), tabla_rotacion_seg: int = Form(...),
-    campeonato_id: int | None = Form(default=None), fecha_id: int | None = Form(default=None), categoria_id: int | None = Form(default=None), db: Session = Depends(get_db),
-):
-    exigir_operador_tv(request)
-    salida = obtener_o_crear_salida(db)
-
-    salida.graph_color_principal = color(graph_color_principal, DEFAULTS["graph_color_principal"])
-    salida.graph_color_fondo = color(graph_color_fondo, DEFAULTS["graph_color_fondo"])
-    salida.graph_color_texto = color(graph_color_texto, DEFAULTS["graph_color_texto"])
-    salida.graph_color_secundario = color(graph_color_secundario, DEFAULTS["graph_color_secundario"])
-    salida.graph_nombre_px = entero(graph_nombre_px, 28, 90, DEFAULTS["graph_nombre_px"])
-    salida.graph_detalle_px = entero(graph_detalle_px, 18, 60, DEFAULTS["graph_detalle_px"])
-    salida.graph_ancho_px = entero(graph_ancho_px, 700, 1750, DEFAULTS["graph_ancho_px"])
-    salida.graph_left_px = entero(graph_left_px, 0, 1100, DEFAULTS["graph_left_px"])
-    salida.graph_bottom_px = entero(graph_bottom_px, 0, 700, DEFAULTS["graph_bottom_px"])
-    salida.ticker_color_fondo = color(ticker_color_fondo, DEFAULTS["ticker_color_fondo"])
-    salida.ticker_color_texto = color(ticker_color_texto, DEFAULTS["ticker_color_texto"])
-    salida.ticker_color_acento = color(ticker_color_acento, DEFAULTS["ticker_color_acento"])
-    salida.ticker_fuente_px = entero(ticker_fuente_px, 18, 56, DEFAULTS["ticker_fuente_px"])
-    salida.ticker_alto_px = entero(ticker_alto_px, 60, 180, DEFAULTS["ticker_alto_px"])
-    salida.ticker_bottom_px = entero(ticker_bottom_px, 0, 500, DEFAULTS["ticker_bottom_px"])
-    salida.ticker_velocidad_seg = entero(ticker_velocidad_seg, 6, 120, DEFAULTS["ticker_velocidad_seg"])
-    salida.tabla_color_fondo = color(tabla_color_fondo, DEFAULTS["tabla_color_fondo"])
-    salida.tabla_color_texto = color(tabla_color_texto, DEFAULTS["tabla_color_texto"])
-    salida.tabla_color_acento = color(tabla_color_acento, DEFAULTS["tabla_color_acento"])
-    salida.tabla_fuente_px = entero(tabla_fuente_px, 18, 48, DEFAULTS["tabla_fuente_px"])
-    salida.tabla_filas = entero(tabla_filas, 4, 12, DEFAULTS["tabla_filas"])
-    salida.tabla_rotacion_seg = entero(tabla_rotacion_seg, 3, 60, DEFAULTS["tabla_rotacion_seg"])
-    salida.actualizado_en = datetime.utcnow()
-    db.commit()
-
-    request.session["flash_success"] = "Configuración gráfica TV guardada."
-    url = "/tv"
-    if campeonato_id:
-        url += f"?campeonato_id={campeonato_id}"
-        if fecha_id:
-            url += f"&fecha_id={fecha_id}"
-        if categoria_id:
-            url += f"&categoria_id={categoria_id}"
-    return RedirectResponse(url, status_code=303)
-
-
 @router.post("/configuracion/restaurar")
-def restaurar_configuracion(request: Request, db: Session = Depends(get_db)):
+async def guardar_configuracion(request: Request, db: Session = Depends(get_db)):
     exigir_operador_tv(request)
+    form = await request.form()
+    tipo = form.get('tipo', 'graph')
+    if tipo not in TIPOS_SALIDA:
+        raise HTTPException(status_code=400, detail='Salida inválida.')
     salida = obtener_o_crear_salida(db)
-    for campo, valor in DEFAULTS.items():
-        setattr(salida, campo, valor)
-    salida.actualizado_en = datetime.utcnow()
+    payload = json.loads(getattr(salida, f'{tipo}_pvw'))
+    prefijo = tipo if tipo in {'graph', 'ticker'} else 'tabla'
+    restaurar = request.url.path.endswith('/restaurar')
+    for campo, defecto in DEFAULTS.items():
+        if not campo.startswith(prefijo + '_'):
+            continue
+        valor = defecto if restaurar else form.get(campo, payload['config'][campo])
+        if campo in LIMITES:
+            minimo, maximo = LIMITES[campo]
+            valor = entero(valor, minimo, maximo, defecto)
+        else:
+            valor = color(str(valor), defecto)
+        payload['config'][campo] = valor
+    payload['filas_por_pagina'] = payload['config']['tabla_filas']
+    payload['actualizado_en'] = datetime.utcnow().isoformat()
+    setattr(salida, f'{tipo}_pvw', json.dumps(payload, ensure_ascii=False))
     db.commit()
-    request.session["flash_success"] = "Diseño TV restaurado a valores predeterminados."
-    return RedirectResponse("/tv", status_code=303)
+    request.session['flash_success'] = 'Diseño guardado en PVW.'
+    return RedirectResponse('/tv?tab=' + tipo, status_code=303)
 
 
 @router.post("/salida/regenerar-token")
@@ -530,14 +530,9 @@ def regenerar_token(request: Request, db: Session = Depends(get_db)):
     exigir_operador_tv(request)
     salida = obtener_o_crear_salida(db)
     salida.token = secrets.token_urlsafe(32)
-    # Seguridad operativa: una URL nueva nunca nace al aire.
-    salida.graph_al_aire = False
-    salida.ticker_al_aire = False
-    salida.tabla_sorteo_al_aire = False
-    salida.tabla_campeonato_al_aire = False
     salida.actualizado_en = datetime.utcnow()
     db.commit()
-    request.session["flash_success"] = "URLs TV regeneradas. Las anteriores quedaron invalidadas y todas las salidas quedaron fuera del aire."
+    request.session["flash_success"] = "URLs TV regeneradas. Las anteriores quedaron invalidadas; PVW y PGM se conservaron."
     return RedirectResponse("/tv", status_code=303)
 
 
@@ -545,7 +540,7 @@ def regenerar_token(request: Request, db: Session = Depends(get_db)):
 def salida_vmix(request: Request, token: str, tipo: str, preview: int = Query(default=0), db: Session = Depends(get_db)):
     if tipo not in TIPOS_SALIDA:
         raise HTTPException(status_code=404, detail="Salida TV no encontrada.")
-    salida = db.scalar(select(TvSalida).where(TvSalida.token == token))
+    salida = db.scalar(select(TvSalida).where(TvSalida.token == token).with_for_update())
     if salida is None:
         raise HTTPException(status_code=404, detail="Salida TV no encontrada.")
     return templates.TemplateResponse(
@@ -560,14 +555,17 @@ def salida_vmix(request: Request, token: str, tipo: str, preview: int = Query(de
 def estado_salida_vmix(token: str, tipo: str, preview: int = Query(default=0), db: Session = Depends(get_db)):
     if tipo not in TIPOS_SALIDA:
         raise HTTPException(status_code=404, detail="Salida TV no encontrada.")
-    salida = db.scalar(select(TvSalida).where(TvSalida.token == token))
+    salida = db.scalar(select(TvSalida).where(TvSalida.token == token).with_for_update())
     if salida is None:
         raise HTTPException(status_code=404, detail="Salida TV no encontrada.")
 
+    inicializar_buses(db, salida)
+    payload = json.loads(getattr(salida, f"{tipo}_{'pvw' if preview else 'pgm'}"))
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+
+
+def construir_payload(db, salida, tipo):
     sorteo = sorteo_de_salida(db, salida, tipo)
-    # Durante la preparación, si todavía no se guardó esa salida, usar el sorteo actual legacy para preview.
-    if sorteo is None and salida.sorteo_id:
-        sorteo = db.get(Sorteo, salida.sorteo_id)
     detalles = detalles_utiles(sorteo)
     actual = detalle_valido(sorteo, salida.detalle_id)
     categoria = sorteo.categoria if sorteo is not None else None
@@ -610,17 +608,16 @@ def estado_salida_vmix(token: str, tipo: str, preview: int = Query(default=0), d
         )
         posiciones_disponibles = bool(posiciones)
 
-    visible = bool(preview) or al_aire(salida, tipo)
-    return JSONResponse(
-        content={
+    return {
             "tipo": tipo,
-            "al_aire": al_aire(salida, tipo),
-            "visible": visible,
+            "al_aire": False,
+            "visible": sorteo is not None and (actual is not None if tipo == "graph" else True),
             "actualizado_en": salida.actualizado_en.isoformat() if salida.actualizado_en else None,
             "campeonato": fecha.campeonato.nombre if fecha else None,
             "fecha": fecha.nombre if fecha else None,
             "fecha_id": fecha.id if fecha else None,
             "categoria": categoria_nombre,
+            "categoria_id": categoria.id if categoria else None,
             "actual": actual_dict,
             "detalles": detalles_dict,
             "siguientes": siguientes_dict,
@@ -639,6 +636,67 @@ def estado_salida_vmix(token: str, tipo: str, preview: int = Query(default=0), d
             "palenques_activos": activos,
             "posiciones": posiciones,
             "posiciones_disponibles": posiciones_disponibles,
-        },
-        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "X-Robots-Tag": "noindex, nofollow, noarchive"},
-    )
+        }
+
+
+def inicializar_buses(db, salida):
+    cambio = False
+    for tipo in TIPOS_SALIDA:
+        if getattr(salida, f"{tipo}_pvw") is None:
+            payload = construir_payload(db, salida, tipo)
+            setattr(salida, f"{tipo}_pvw", json.dumps(payload, ensure_ascii=False))
+            cambio = True
+        if getattr(salida, f"{tipo}_pgm") is None:
+            payload = json.loads(getattr(salida, f"{tipo}_pvw"))
+            payload['visible'] = bool(payload['visible'] and al_aire(salida, tipo))
+            payload['al_aire'] = payload['visible']
+            setattr(salida, f"{tipo}_pgm", json.dumps(payload, ensure_ascii=False))
+            cambio = True
+    if cambio:
+        db.commit()
+
+
+def guardar_preview(db, salida, tipo, detalle_id=None):
+    from types import SimpleNamespace
+    valores = {c.name: getattr(salida, c.name) for c in TvSalida.__table__.columns}
+    if tipo == 'ticker':
+        valores['detalle_id'] = detalle_id
+    payload = construir_payload(db, SimpleNamespace(**valores), tipo)
+    anterior = json.loads(getattr(salida, f"{tipo}_pvw"))
+    payload['config'] = anterior['config']
+    payload['filas_por_pagina'] = anterior['config']['tabla_filas']
+    setattr(salida, f"{tipo}_pvw", json.dumps(payload, ensure_ascii=False))
+
+
+@router.post('/salida/{tipo}/vaciar')
+def vaciar_preview(request: Request, tipo: str, db: Session = Depends(get_db)):
+    exigir_operador_tv(request)
+    if tipo not in TIPOS_SALIDA:
+        raise HTTPException(status_code=400, detail='Salida inválida.')
+    salida = obtener_o_crear_salida(db)
+    payload = json.loads(getattr(salida, f'{tipo}_pvw'))
+    payload.update(visible=False, al_aire=False, actual=None, detalles=[], siguientes=[], posiciones=[], posiciones_disponibles=False)
+    payload['actualizado_en'] = datetime.utcnow().isoformat()
+    setattr(salida, f'{tipo}_pvw', json.dumps(payload, ensure_ascii=False))
+    db.commit()
+    request.session['flash_success'] = 'PVW vacío. Mandalo al aire para limpiar PGM.'
+    return RedirectResponse('/tv?tab=' + tipo, status_code=303)
+
+
+@router.post('/salida/{tipo}/limpiar-pgm')
+def limpiar_programa(request: Request, tipo: str, db: Session = Depends(get_db)):
+    """Limpieza explícita de la salida elegida; conserva su preparación en PVW."""
+    exigir_operador_tv(request)
+    if tipo not in TIPOS_SALIDA:
+        raise HTTPException(status_code=400, detail='Salida inválida.')
+    salida = obtener_o_crear_salida(db)
+    payload = json.loads(getattr(salida, f'{tipo}_pgm'))
+    payload.update(visible=False, al_aire=False, actual=None, detalles=[], siguientes=[], posiciones=[], posiciones_disponibles=False)
+    payload['actualizado_en'] = datetime.utcnow().isoformat()
+    setattr(salida, f'{tipo}_pgm', json.dumps(payload, ensure_ascii=False))
+    attr = {'graph': 'graph_al_aire', 'ticker': 'ticker_al_aire',
+            'sorteo': 'tabla_sorteo_al_aire', 'campeonato': 'tabla_campeonato_al_aire'}[tipo]
+    setattr(salida, attr, False)
+    db.commit()
+    request.session['flash_success'] = 'PGM limpio. PVW se conservó preparado.'
+    return RedirectResponse('/tv?tab=' + tipo, status_code=303)

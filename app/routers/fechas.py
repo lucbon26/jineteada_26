@@ -138,6 +138,7 @@ def crear_fecha(
     lugar: str = Form(""),
     organizador: str = Form(""),
     estado: str = Form("programada"),
+    estado_publico_manual: str = Form(""),
     observaciones: str = Form(""),
     youtube_url: str = Form(""),
     youtube_publicar: bool = Form(False),
@@ -155,6 +156,7 @@ def crear_fecha(
             detail="Campeonato no encontrado",
         )
 
+    validar_estados(estado, estado_publico_manual)
     nueva_fecha = Fecha(
         campeonato_id=campeonato_id,
         nombre=nombre.strip(),
@@ -164,6 +166,7 @@ def crear_fecha(
         lugar=lugar.strip() or None,
         organizador=organizador.strip() or None,
         estado=estado,
+        estado_publico_manual=estado_publico_manual or None,
         observaciones=observaciones.strip() or None,
         youtube_url=youtube_url.strip() or None,
         youtube_publicar=bool(youtube_publicar and youtube_url.strip()),
@@ -216,6 +219,7 @@ def editar_fecha(
     lugar: str = Form(""),
     organizador: str = Form(""),
     estado: str = Form("programada"),
+    estado_publico_manual: str = Form(""),
     observaciones: str = Form(""),
     youtube_url: str = Form(""),
     youtube_publicar: bool = Form(False),
@@ -229,7 +233,9 @@ def editar_fecha(
     fecha_evento.provincia = provincia.strip() or None
     fecha_evento.lugar = lugar.strip() or None
     fecha_evento.organizador = organizador.strip() or None
+    validar_estados(estado, estado_publico_manual)
     fecha_evento.estado = estado
+    fecha_evento.estado_publico_manual = estado_publico_manual or None
     fecha_evento.observaciones = observaciones.strip() or None
     fecha_evento.youtube_url = youtube_url.strip() or None
     fecha_evento.youtube_publicar = bool(
@@ -247,15 +253,23 @@ def editar_fecha(
 @router.post("/{fecha_id}/eliminar")
 def eliminar_fecha(
     fecha_id: int,
+    request: Request,
     db: Session = Depends(get_db),
 ):
+    from app.services.eliminacion import exigir_borrado, borrar_fechas, recalcular_campeonato
+    exigir_borrado(request)
     fecha_evento = obtener_fecha_o_404(fecha_id, db)
     campeonato_id = fecha_evento.campeonato_id
-
-    db.delete(fecha_evento)
+    borrar_fechas(db, [fecha_id])
+    recalcular_campeonato(db, campeonato_id)
     db.commit()
 
     return RedirectResponse(
         url=f"/campeonatos/{campeonato_id}",
         status_code=303,
     )
+
+def validar_estados(estado, manual):
+    validos = {"programada", "en_curso", "finalizada", "suspendida", "cancelada", "reprogramada"}
+    if estado not in validos or (manual and manual not in validos):
+        raise HTTPException(status_code=400, detail="Estado de fecha inválido.")

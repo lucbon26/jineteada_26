@@ -103,11 +103,17 @@
                                 <label class="form-check-label fw-bold" for="modo_prueba">🧪 Modo prueba</label>
                             </div>
                             <div class="form-text">
-                                No genera auditoría oficial de sorteos. El MASTER puede eliminar luego
+                                No genera auditoría oficial de sorteos. ADMIN y MASTER pueden eliminar luego
                                 todos sus datos sin borrar jinetes, caballos ni tropillas maestros.
                             </div>
                         </div>
 
+                        <fieldset class="border rounded p-3 mb-4"><legend class="h5">Contenido público</legend>
+                            <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="publicado" value="true" {% if campeonato and campeonato.publicado %}checked{% endif %}> Publicar campeonato, sorteos y resultados en el portal</label>
+                            <label class="form-label">Información pública</label><textarea name="informacion_publica" class="form-control mb-3" rows="4">{{ campeonato.informacion_publica or '' if campeonato else '' }}</textarea>
+                            <label class="form-label">Reglamento público</label><textarea name="reglamento_publico" class="form-control mb-3" rows="6">{{ campeonato.reglamento_publico or '' if campeonato else '' }}</textarea>
+                            <label class="form-label">Enlace HTTPS al documento (opcional)</label><input type="url" name="documento_url" class="form-control" maxlength="500" value="{{ campeonato.documento_url or '' if campeonato else '' }}">
+                        </fieldset>
                         <div class="d-flex justify-content-between">
                             <a href="/campeonatos" class="btn btn-outline-secondary">
                                 Cancelar

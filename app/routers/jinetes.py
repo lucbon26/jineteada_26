@@ -433,6 +433,7 @@ def crear_jinete(
         club_agrupacion=club_agrupacion.strip() or None,
         observaciones=observaciones.strip() or None,
         estado=estado,
+        estado_causa="manual" if estado != "activo" else None,
     )
 
     db.add(nuevo)
@@ -1223,6 +1224,8 @@ def editar_jinete(
     jinete.categoria_habitual = categoria_habitual.strip() or None
     jinete.club_agrupacion = club_agrupacion.strip() or None
     jinete.observaciones = observaciones.strip() or None
+    if jinete.estado != estado:
+        jinete.estado_causa = "manual" if estado != "activo" else None
     jinete.estado = estado
 
     db.commit()

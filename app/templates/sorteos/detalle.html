@@ -52,10 +52,10 @@
                 <button class="btn btn-success">Publicar sorteo</button>
             </form>
             {% endif %}
-            <form method="post" action="/sorteos/{{ sorteo.id }}/eliminar"
-                  onsubmit="return confirm('Se eliminará este sorteo y quedará habilitado para volver a sortear. Los jinetes, acreditaciones y caballos NO se borrarán. ¿Continuar?');">
+            {% if request.session.get('usuario_rol', '')|upper in ['ADMIN', 'MASTER'] %}<form method="post" action="/sorteos/{{ sorteo.id }}/eliminar"
+                  onsubmit="return confirm('Se eliminarán este sorteo y sus resultados cargados; quedará habilitado para volver a sortear. Los jinetes, acreditaciones y caballos NO se borrarán. ¿Continuar?');">
                 <button class="btn btn-outline-danger">Eliminar para resortear</button>
-            </form>
+            </form>{% endif %}
         {% elif sorteo.publicado %}
         <a href="/publico/sorteos" target="_blank" class="btn btn-outline-success">
             Ver publicación

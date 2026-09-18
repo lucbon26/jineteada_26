@@ -21,6 +21,7 @@
                 <p class="lead-copy">{{ campeonato.descripcion }}</p>
                 {% endif %}
 
+                {% if campeonato.informacion_publica %}<div style="white-space:pre-wrap">{{ campeonato.informacion_publica }}</div>{% endif %}
                 <div class="info-panel">
                     <div>
                         <small>INICIO</small>
@@ -52,6 +53,8 @@
                         <div class="category-card">
                             <span>{{ "%02d"|format(loop.index) }}</span>
                             <strong>{{ categoria.nombre }}</strong>
+                            {% if categoria.tipo_monta %}<p><b>Modalidad:</b> {{ categoria.tipo_monta }}</p>{% endif %}
+                            {% if categoria.equipamiento %}<p style="white-space:pre-wrap"><b>Equipamiento:</b> {{ categoria.equipamiento }}</p>{% endif %}
                             {% if categoria.descripcion %}
                             <p>{{ categoria.descripcion }}</p>
                             {% endif %}
@@ -80,7 +83,7 @@
                                     {% if fecha.lugar %} · {{ fecha.lugar }}{% endif %}
                                 </span>
                             </div>
-                            <div class="calendar-state">{{ fecha.estado }}</div>
+                            <div class="calendar-state">{{ fecha.estado_publico }}</div>
                         </div>
                         {% else %}
                         <div class="empty-public">Todavía no hay fechas publicadas.</div>
@@ -93,13 +96,8 @@
                 <div class="aside-card sticky-card">
                     <div class="aside-icon">📜</div>
                     <h3>Reglamento oficial</h3>
-                    <p>
-                        En esta sección se publicará el reglamento vigente del
-                        Campeonato Rionegrino de Jineteada.
-                    </p>
-                    <button class="btn-public btn-disabled" type="button" disabled>
-                        Próximamente
-                    </button>
+                    {% if campeonato.reglamento_publico %}<div style="white-space:pre-wrap">{{ campeonato.reglamento_publico }}</div>{% else %}<p>Reglamento pendiente de publicación.</p>{% endif %}
+                    {% if campeonato.documento_url %}<a class="btn-public" href="{{ campeonato.documento_url }}" target="_blank" rel="noopener noreferrer">Abrir documento oficial</a>{% endif %}
                 </div>
             </aside>
         </div>

@@ -67,6 +67,8 @@ class Categoria(Base):
         nullable=True,
     )
 
+    equipamiento: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     orden: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

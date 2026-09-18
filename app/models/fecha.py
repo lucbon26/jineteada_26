@@ -30,6 +30,20 @@ class Fecha(Base):
         default="programada",
     )
 
+    estado_publico_manual: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+    @property
+    def estado_publico(self) -> str:
+        from datetime import timedelta, timezone
+        hoy = datetime.now(timezone(timedelta(hours=-3))).date()
+        if self.estado_publico_manual:
+            return self.estado_publico_manual.upper()
+        if self.estado in {"suspendida", "cancelada", "reprogramada"}:
+            return self.estado.upper()
+        if self.fecha < hoy:
+            return "FINALIZADA"
+        return self.estado.upper()
+
     sorteada: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

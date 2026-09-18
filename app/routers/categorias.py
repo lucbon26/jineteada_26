@@ -82,6 +82,7 @@ def crear_categoria(
     request: Request,
     nombre: str = Form(...),
     descripcion: str = Form(""),
+    equipamiento: str = Form(""),
     orden: int = Form(10),
     activa: str | None = Form(None),
     puntua_campeonato: str | None = Form(None),
@@ -144,6 +145,7 @@ def crear_categoria(
             categoria_global_id=global_existente.id,
             nombre=global_existente.nombre,
             descripcion=ejemplo.descripcion if ejemplo else None,
+            equipamiento=ejemplo.equipamiento if ejemplo else None,
             orden=ejemplo.orden if ejemplo else 10,
             activa=True,
             puntua_campeonato=ejemplo.puntua_campeonato if ejemplo else True,
@@ -165,6 +167,7 @@ def crear_categoria(
             categoria_global_id=categoria_global.id,
             nombre=nombre_limpio,
             descripcion=descripcion.strip() or None,
+            equipamiento=equipamiento.strip() or None,
             orden=orden,
             activa=activa == "on",
             puntua_campeonato=puntua_campeonato == "on",
@@ -210,6 +213,7 @@ def editar_categoria(
     request: Request,
     nombre: str = Form(...),
     descripcion: str = Form(""),
+    equipamiento: str = Form(""),
     orden: int = Form(10),
     activa: str | None = Form(None),
     puntua_campeonato: str | None = Form(None),
@@ -244,6 +248,7 @@ def editar_categoria(
 
     categoria.nombre = nombre_limpio
     categoria.descripcion = descripcion.strip() or None
+    categoria.equipamiento = equipamiento.strip() or None
     categoria.orden = orden
     categoria.activa = activa == "on"
     categoria.puntua_campeonato = puntua_campeonato == "on"

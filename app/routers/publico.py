@@ -24,7 +24,7 @@ router = APIRouter(tags=["Portal público"])
 def campeonato_oficial_actual(db: Session) -> Campeonato | None:
     campeonatos = db.scalars(
         select(Campeonato)
-        .where(Campeonato.modo_prueba == False)
+        .where(Campeonato.modo_prueba == False, Campeonato.publicado == True)
         .order_by(Campeonato.id.desc())
     ).all()
 
@@ -45,24 +45,10 @@ def proxima_fecha_oficial(
     if campeonato is None:
         return None
 
-    hoy = date.today()
-
-    proxima = db.scalar(
-        select(Fecha)
-        .where(
-            Fecha.campeonato_id == campeonato.id,
-            Fecha.fecha >= hoy,
-        )
-        .order_by(Fecha.fecha.asc(), Fecha.id.asc())
-    )
-    if proxima is not None:
-        return proxima
-
-    return db.scalar(
-        select(Fecha)
-        .where(Fecha.campeonato_id == campeonato.id)
-        .order_by(Fecha.fecha.desc(), Fecha.id.desc())
-    )
+    from datetime import datetime, timedelta, timezone
+    hoy = datetime.now(timezone(timedelta(hours=-3))).date()
+    fechas = db.scalars(select(Fecha).where(Fecha.campeonato_id == campeonato.id, Fecha.fecha >= hoy).order_by(Fecha.fecha, Fecha.id)).all()
+    return next((f for f in fechas if f.estado_publico not in {"FINALIZADA", "SUSPENDIDA", "CANCELADA", "REPROGRAMADA"}), None)
 
 
 def youtube_embed_url(url: str | None) -> str | None:

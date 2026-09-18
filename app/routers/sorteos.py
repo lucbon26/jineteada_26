@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services.clasificacion import habilitado, bloqueo_sorteo
 from app.models.caballo import Caballo
 from app.models.caballo_fecha import CaballoFecha
 from app.models.campeonato import Campeonato
@@ -166,7 +167,7 @@ def datos_categoria(
     jinetes_validados = []
     for inscripcion in validados:
         jinete = db.get(Jinete, inscripcion.jinete_id)
-        if jinete is not None:
+        if habilitado(db, jinete, fecha, categoria.id, para_sorteo=True):
             jinetes_validados.append(jinete)
 
     caballos = []
@@ -175,6 +176,7 @@ def datos_categoria(
         if caballo is not None:
             caballos.append(caballo)
 
+    bloqueo = bloqueo_sorteo(db, fecha, categoria)
     cantidad_validados = len(jinetes_validados)
     cantidad_caballos = len(caballos)
     minimo = cantidad_validados + 3
@@ -198,7 +200,8 @@ def datos_categoria(
         "minimo_caballos": minimo,
         "faltantes": faltantes,
         "excedentes_sobre_minimo": excedentes_sobre_minimo,
-        "puede_sortear": cantidad_validados > 0 and faltantes == 0,
+        "bloqueo_repechaje": bloqueo,
+        "puede_sortear": cantidad_validados > 0 and faltantes == 0 and not bloqueo,
         "sorteo": obtener_sorteo(fecha.id, categoria.id, db),
     }
 
@@ -567,6 +570,10 @@ def realizar_sorteo(
             detail="Esta categoría ya fue sorteada.",
         )
 
+    db.scalar(select(Categoria).where(Categoria.id == categoria_id).with_for_update())
+    bloqueo = bloqueo_sorteo(db, fecha, categoria)
+    if bloqueo:
+        raise HTTPException(409, bloqueo)
     datos = datos_categoria(fecha, categoria, db)
     jinetes = datos["jinetes_validados"]
     caballos = datos["caballos"]
@@ -842,6 +849,8 @@ def eliminar_sorteo(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    from app.services.eliminacion import exigir_borrado, borrar_sorteos, recalcular_campeonato
+    exigir_borrado(request)
     redireccion = exigir_sesion(request)
     if redireccion:
         return redireccion
@@ -870,7 +879,8 @@ def eliminar_sorteo(
         ),
     )
 
-    db.delete(sorteo)
+    borrar_sorteos(db, [sorteo.id])
+    recalcular_campeonato(db, campeonato_id)
     db.flush()
     actualizar_bandera_fecha(fecha, db)
     db.commit()
@@ -899,11 +909,13 @@ def sorteos_publicos(
         select(Campeonato)
         .join(Fecha, Fecha.campeonato_id == Campeonato.id)
         .join(Sorteo, Sorteo.fecha_id == Fecha.id)
-        .where(Sorteo.publicado == True)
+        .where(Sorteo.publicado == True, Campeonato.publicado == True, Campeonato.modo_prueba == False)
         .distinct()
         .order_by(Campeonato.id.desc())
     ).all()
 
+    if campeonato_id not in {c.id for c in campeonatos}:
+        campeonato_id = 0
     if campeonato_id <= 0 and campeonatos:
         campeonato_id = campeonatos[0].id
 
@@ -922,6 +934,8 @@ def sorteos_publicos(
             .order_by(Fecha.fecha.desc())
         ).all()
 
+        if fecha_id not in {f.id for f in fechas}:
+            fecha_id = 0
         if fecha_id <= 0 and fechas:
             fecha_id = fechas[0].id
 
@@ -956,7 +970,7 @@ def pdf_sorteo_publico(
     db: Session = Depends(get_db),
 ):
     sorteo = db.get(Sorteo, sorteo_id)
-    if sorteo is None or not sorteo.publicado:
+    if sorteo is None or not sorteo.publicado or not sorteo.fecha.campeonato.publicado or sorteo.fecha.campeonato.modo_prueba:
         raise HTTPException(status_code=404, detail="Sorteo no encontrado")
 
     pdf = generar_pdf_sorteo(sorteo)

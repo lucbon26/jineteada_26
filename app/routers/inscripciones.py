@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.services.clasificacion import habilitado, ausencias_consecutivas
 
 import base64
 from datetime import datetime, timezone
@@ -102,18 +103,7 @@ def cantidad_ausencias_campeonato(
     campeonato_id: int,
     db: Session,
 ) -> int:
-    return int(
-        db.scalar(
-            select(func.count(JineteFecha.id))
-            .join(Fecha, Fecha.id == JineteFecha.fecha_id)
-            .where(
-                JineteFecha.jinete_id == jinete_id,
-                Fecha.campeonato_id == campeonato_id,
-                JineteFecha.estado == "ausente",
-            )
-        )
-        or 0
-    )
+    return ausencias_consecutivas(db, jinete_id, campeonato_id)
 
 
 def cantidad_suspensiones_campeonato(
@@ -184,6 +174,8 @@ def preparar_inscripciones_fecha(
             continue
 
         if jinete.estado in {"inactivo", "descalificado"}:
+            continue
+        if jinete.estado == "activo" and not habilitado(db, jinete, fecha, pre.categoria_id):
             continue
 
         estado = "pendiente"
@@ -566,6 +558,7 @@ def detalle_inscripciones_fecha(
             }
             for pre, jinete, categoria in preinscriptos_alta
             if jinete.id not in ya_inscriptos_ids
+            and habilitado(db, jinete, fecha, categoria.id)
         ]
 
     resumen = {
@@ -654,12 +647,12 @@ def alta_manual_inscripcion_cerrada(
     if jinete is None:
         raise HTTPException(status_code=404, detail="Jinete no encontrado.")
 
-    if jinete.estado != "activo":
+    if not habilitado(db, jinete, fecha, pre.categoria_id):
         return RedirectResponse(
             url=(
                 f"/inscripciones/fecha/{fecha_id}"
                 "?tipo=danger&mensaje=No se puede agregar el jinete porque "
-                f"su estado actual es {jinete.estado}."
+                "no está habilitado por clasificación o por su estado actual."
             ),
             status_code=303,
         )
@@ -761,15 +754,16 @@ def validar_qr(
             status_code=303,
         )
 
-    if jinete.estado != "activo":
-        inscripcion.estado = "no_habilitado"
-        inscripcion.motivo_no_habilitado = jinete.estado
+    if not habilitado(db, jinete, fecha, inscripcion.categoria_id):
+        if jinete.estado != "activo":
+            inscripcion.estado = "no_habilitado"
+            inscripcion.motivo_no_habilitado = jinete.estado
         db.commit()
         return RedirectResponse(
             url=(
                 f"/inscripciones/fecha/{fecha_id}"
                 "?tipo=danger&mensaje="
-                f"{jinete.apellidos}, {jinete.nombres} no está habilitado: {jinete.estado}."
+                f"{jinete.apellidos}, {jinete.nombres} no está habilitado por clasificación o sanción."
             ),
             status_code=303,
         )
@@ -936,6 +930,9 @@ def cerrar_inscripcion(
             elif jinete.estado == "suspendido":
                 inscripcion.estado = "no_habilitado"
                 inscripcion.motivo_no_habilitado = "suspendido"
+            elif not habilitado(db, jinete, fecha, inscripcion.categoria_id):
+                inscripcion.estado = "no_habilitado"
+                inscripcion.motivo_no_habilitado = "clasificacion"
             else:
                 inscripcion.estado = "ausente"
                 inscripcion.motivo_no_habilitado = None
@@ -944,13 +941,10 @@ def cerrar_inscripcion(
         db.flush()
 
         if inscripcion.estado == "ausente" and jinete.estado != "inactivo":
-            faltas = cantidad_ausencias_campeonato(
-                jinete.id,
-                fecha.campeonato_id,
-                db,
-            )
+            faltas = ausencias_consecutivas(db, jinete.id, fecha.campeonato_id, fecha)
             if faltas >= 2 and jinete.estado != "descalificado":
                 jinete.estado = "descalificado"
+                jinete.estado_causa = "ausencias_consecutivas"
                 descalificados_faltas += 1
 
         if (
@@ -965,6 +959,7 @@ def cerrar_inscripcion(
             )
             if suspensiones >= 2 and jinete.estado != "descalificado":
                 jinete.estado = "descalificado"
+                jinete.estado_causa = "limite_suspensiones"
                 descalificados_suspension += 1
 
     fecha.inscripcion_cerrada = True
@@ -973,7 +968,7 @@ def cerrar_inscripcion(
 
     mensaje = (
         f"Inscripción cerrada. {ausentes} ausente(s). "
-        f"{descalificados_faltas} descalificado(s) por 2 faltas. "
+        f"{descalificados_faltas} descalificado(s) por 2 ausencias consecutivas. "
         f"{descalificados_suspension} descalificado(s) por límite de suspensión."
     )
 

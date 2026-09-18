@@ -32,6 +32,11 @@ class Campeonato(Base):
         nullable=True,
     )
 
+    informacion_publica: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reglamento_publico: Mapped[str | None] = mapped_column(Text, nullable=True)
+    documento_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    publicado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
     fecha_inicio: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,

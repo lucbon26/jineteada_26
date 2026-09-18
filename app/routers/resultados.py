@@ -21,6 +21,7 @@ from app.models.jinete_campeonato import JineteCampeonato
 from app.models.resultado import ResultadoCategoria, ResultadoDetalle
 from app.models.sorteo import Sorteo, SorteoDetalle
 from app.services.resultados import posiciones_campeonato
+from app.services.clasificacion import recalcular_categoria, estados_publicos
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -366,12 +367,14 @@ def finalizar_resultado(request: Request, resultado_id: int, db: Session = Depen
     esperadas = len(detalle_utiles(resultado.sorteo))
     if len(resultado.detalles) != esperadas:
         raise HTTPException(status_code=400, detail="La carga no contiene todas las montas oficiales.")
+    if any(r.puntos is None for r in resultado.detalles):
+        raise HTTPException(status_code=400, detail="Completá todos los puntajes; un campo vacío no equivale a cero.")
     resultado.estado = "finalizado"
     resultado.finalizado_en = datetime.utcnow()
     resultado.actualizado_en = datetime.utcnow()
     db.flush()
 
-    descalificados = aplicar_descalificacion_por_puntaje(
+    descalificados = recalcular_categoria(
         db,
         resultado.sorteo.fecha.campeonato_id,
         resultado.sorteo.categoria_id,
@@ -381,8 +384,7 @@ def finalizar_resultado(request: Request, resultado_id: int, db: Session = Depen
     mensaje = "Categoría finalizada. Ya puede publicarse cuando corresponda."
     if descalificados:
         mensaje += (
-            f" {descalificados} jinete(s) quedaron descalificados por no alcanzar "
-            "5 puntos acumulados en las primeras 2 fechas."
+            f" Clasificación actualizada para {descalificados} jinete(s)."
         )
     request.session["flash_success"] = mensaje
     return RedirectResponse(url_panel(resultado.sorteo), status_code=303)
@@ -396,9 +398,16 @@ def reabrir_resultado(request: Request, resultado_id: int, db: Session = Depends
         raise HTTPException(status_code=404, detail="Resultado no encontrado.")
     if resultado.estado != "finalizado":
         raise HTTPException(status_code=400, detail="Sólo un resultado finalizado y no publicado puede reabrirse.")
+    from app.services.clasificacion import fechas_oficiales, hay_sorteo_posterior
+    cat = db.scalar(select(Categoria).where(Categoria.id == resultado.sorteo.categoria_id).with_for_update())
+    primeras = fechas_oficiales(db, cat.campeonato_id)[:2]
+    if resultado.sorteo.fecha_id in {f.id for f in primeras} and hay_sorteo_posterior(db, cat):
+        raise HTTPException(409, "No se puede cambiar F1/F2 con un sorteo de F3 o posterior vigente.")
     resultado.estado = "borrador"
     resultado.finalizado_en = None
     resultado.actualizado_en = datetime.utcnow()
+    db.flush()
+    recalcular_categoria(db, resultado.sorteo.fecha.campeonato_id, resultado.sorteo.categoria_id)
     db.commit()
     request.session["flash_success"] = "Resultado reabierto como borrador."
     return RedirectResponse(url_panel(resultado.sorteo), status_code=303)
@@ -437,66 +446,6 @@ def despublicar_resultado(request: Request, resultado_id: int, db: Session = Dep
 
 
 
-def aplicar_descalificacion_por_puntaje(
-    db: Session,
-    campeonato_id: int,
-    categoria_id: int,
-) -> int:
-    """Descalifica si no alcanza 5 puntos acumulados en las primeras dos
-    fechas oficiales de su categoría. Sólo corre cuando ambas están cerradas
-    en Resultados (finalizado/publicado).
-    """
-    primeros_sorteos = db.scalars(
-        select(Sorteo)
-        .join(Fecha, Fecha.id == Sorteo.fecha_id)
-        .where(
-            Fecha.campeonato_id == campeonato_id,
-            Sorteo.categoria_id == categoria_id,
-        )
-        .order_by(Fecha.fecha.asc(), Fecha.id.asc(), Sorteo.id.asc())
-        .limit(2)
-    ).all()
-
-    if len(primeros_sorteos) < 2:
-        return 0
-
-    cargas = []
-    for sorteo in primeros_sorteos:
-        carga = obtener_resultado(db, sorteo.id)
-        if carga is None or carga.estado not in {"finalizado", "publicado"}:
-            return 0
-        cargas.append(carga)
-
-    puntos_por_jinete: dict[int, Decimal] = {}
-    for carga in cargas:
-        for rd in carga.detalles:
-            detalle = rd.sorteo_detalle
-            if detalle is None or detalle.es_reserva or detalle.jinete_id is None:
-                continue
-            puntos_por_jinete.setdefault(detalle.jinete_id, Decimal("0"))
-            if rd.puntos is not None:
-                puntos_por_jinete[detalle.jinete_id] += Decimal(rd.puntos)
-
-    inscriptos = db.scalars(
-        select(JineteCampeonato).where(
-            JineteCampeonato.campeonato_id == campeonato_id,
-            JineteCampeonato.categoria_id == categoria_id,
-        )
-    ).all()
-
-    descalificados = 0
-    for inscripto in inscriptos:
-        total = puntos_por_jinete.get(inscripto.jinete_id, Decimal("0"))
-        if total >= Decimal("5"):
-            continue
-        jinete = db.get(Jinete, inscripto.jinete_id)
-        if jinete is not None and jinete.estado != "descalificado":
-            jinete.estado = "descalificado"
-            descalificados += 1
-
-    return descalificados
-
-
 def resultados_fecha_ordenados(resultado: ResultadoCategoria) -> list[dict]:
     filas = []
     for rd in resultado.detalles:
@@ -505,6 +454,7 @@ def resultados_fecha_ordenados(resultado: ResultadoCategoria) -> list[dict]:
             continue
         puntos_decimal = Decimal(rd.puntos) if rd.puntos is not None else None
         filas.append({
+            "jinete_id": d.jinete_id,
             "orden": d.orden,
             "jinete": d.jinete_nombre or "-",
             "localidad": d.jinete_localidad or "-",
@@ -550,6 +500,8 @@ def datos_publicos(db: Session = Depends(get_db)):
         fecha = sorteo.fecha
         categoria = sorteo.categoria
         campeonato = fecha.campeonato
+        if not campeonato.publicado or campeonato.modo_prueba:
+            continue
         camp = agrupado.setdefault(campeonato.id, {
             "id": campeonato.id,
             "nombre": campeonato.nombre,
@@ -568,9 +520,16 @@ def datos_publicos(db: Session = Depends(get_db)):
             "localidad": fecha.localidad,
             "resultados": resultados_fecha_ordenados(resultado),
         })
+        etiquetas = estados_publicos(db, campeonato.id, categoria.id)
+        for fila in cat["fechas"][-1]["resultados"]:
+            fila["estado"] = etiquetas.get(fila["jinete_id"], "EN COMPETENCIA")
 
     campeonatos = []
     for camp in agrupado.values():
         camp["categorias"] = list(camp["categorias"].values())
         campeonatos.append(camp)
     return JSONResponse({"campeonatos": campeonatos}, headers={"Cache-Control": "no-store"})
+
+
+from app.routers.repechaje import router as repechaje_router
+router.include_router(repechaje_router)

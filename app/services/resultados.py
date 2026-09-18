@@ -54,13 +54,18 @@ def posiciones_campeonato(
             fila["puntos"] += Decimal(resultado.puntos)
             fila["fechas_puntuadas"] += 1
 
+    from app.services.clasificacion import estados_publicos
+    estados = estados_publicos(db, campeonato_id, categoria_id)
+    for fila in acumulado.values():
+        fila["estado"] = estados.get(fila["jinete_id"], "EN COMPETENCIA")
+
     ordenadas = sorted(
         acumulado.values(),
-        key=lambda x: (-x["puntos"], str(x["jinete"]).upper()),
+        key=lambda x: (x["estado"] != "CLASIFICADO", -x["puntos"], str(x["jinete"]).upper()),
     )
 
-    # Puestos únicos y consecutivos. En empate de puntaje se usa el orden
-    # alfabético, sin compartir posición.
+    # Clasificados primero, luego los demás; puntos descendentes en cada grupo.
+    # Puestos consecutivos y desempate alfabético, sin modificar los puntos.
     for indice, fila in enumerate(ordenadas, start=1):
         fila["posicion"] = indice
         fila["puntos"] = float(fila["puntos"])

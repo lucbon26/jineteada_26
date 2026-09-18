@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services.clasificacion import habilitado
 from app.core.permissions import normalizar_rol
 from app.models.campeonato import Campeonato
 from app.models.categoria import Categoria
@@ -214,6 +215,9 @@ def validar_desde_celular(
 
     categoria = db.get(Categoria, inscripcion.categoria_id)
     categoria_nombre = categoria.nombre if categoria else ""
+
+    if not habilitado(db, jinete, fecha, inscripcion.categoria_id):
+        return respuesta_error(409, "NO HABILITADO", "No habilitado por clasificación o sanción.", "no_habilitado")
 
     if inscripcion.estado == "validado":
         hora = hora_local(inscripcion.validado_en)

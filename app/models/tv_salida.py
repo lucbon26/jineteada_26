@@ -19,6 +19,18 @@ class TvSalida(Base):
         String(80), nullable=False, unique=True, index=True
     )
 
+    graph_pvw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    graph_pgm: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    ticker_pvw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ticker_pgm: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    sorteo_pvw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sorteo_pgm: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    campeonato_pvw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    campeonato_pgm: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Campos legacy de la primera versión. Se mantienen por compatibilidad.
     escena: Mapped[str] = mapped_column(
         String(30), nullable=False, default="oculto"

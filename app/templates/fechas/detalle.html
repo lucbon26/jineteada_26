@@ -48,12 +48,12 @@ Fecha del campeonato
                     Editar
                 </a>
 
-                <form method="post" action="/fechas/{{ fecha_evento.id }}/eliminar"
-                    onsubmit="return confirm('¿Seguro que querés eliminar esta fecha?');">
+                {% if request.session.get('usuario_rol', '')|upper in ['ADMIN', 'MASTER'] %}<form method="post" action="/fechas/{{ fecha_evento.id }}/eliminar"
+                    onsubmit="return confirm('¿Eliminar esta fecha, sus sorteos, resultados e inscripciones? No se puede deshacer.');">
                     <button type="submit" class="btn btn-outline-danger">
                         Eliminar
                     </button>
-                </form>
+                </form>{% endif %}
 
             </div>
 

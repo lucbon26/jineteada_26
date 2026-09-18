@@ -40,6 +40,8 @@ class Jinete(Base):
     club_agrupacion: Mapped[str | None] = mapped_column(String(150), nullable=True)
     observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    estado_causa: Mapped[str | None] = mapped_column(String(60), nullable=True)
+
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="activo")
 
     creado_en: Mapped[datetime] = mapped_column(
