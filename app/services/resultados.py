@@ -54,17 +54,22 @@ def posiciones_campeonato(
             fila["puntos"] += Decimal(resultado.puntos)
             fila["fechas_puntuadas"] += 1
 
-    from app.services.clasificacion import estados_publicos
+    from app.services.clasificacion import estados_publicos, base_categoria, puntos_repechaje_confirmados
     estados = estados_publicos(db, campeonato_id, categoria_id)
     for fila in acumulado.values():
         fila["estado"] = estados.get(fila["jinete_id"], "EN COMPETENCIA")
 
+    totales, firma = base_categoria(db, campeonato_id, categoria_id, solo_publicados=True)
+    repechaje_confirmado = totales is not None and puntos_repechaje_confirmados(
+        db, categoria_id, totales, firma
+    ) is not None
     ordenadas = sorted(
         acumulado.values(),
-        key=lambda x: (x["estado"] != "CLASIFICADO", -x["puntos"], str(x["jinete"]).upper()),
+        key=lambda x: (repechaje_confirmado and x["estado"] != "CLASIFICADO", -x["puntos"], str(x["jinete"]).upper()),
     )
 
-    # Clasificados primero, luego los demás; puntos descendentes en cada grupo.
+    # Sólo tras confirmar un repechaje vigente se agrupa a los clasificados.
+    # Antes (también en borrador/reapertura), se ordena únicamente por puntos.
     # Puestos consecutivos y desempate alfabético, sin modificar los puntos.
     for indice, fila in enumerate(ordenadas, start=1):
         fila["posicion"] = indice

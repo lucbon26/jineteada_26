@@ -55,7 +55,12 @@ def main():
                 jinete.estado_causa = 'correccion_puntos_legacy'
                 reporte['reactivados'].append(jinete.id)
             else:
-                reporte['revision_manual'].append({'id': jinete.id, 'causa': jinete.estado_causa, 'evidencia_sancion': sancion})
+                reporte['revision_manual'].append({
+                    'id': jinete.id, 'nombre': jinete.nombre_completo,
+                    'causa': jinete.estado_causa, 'evidencia_sancion': sancion,
+                    'candidato_vieja_regla_puntos': bool(candidatas),
+                    'categorias_afectadas': [pre.categoria_id for pre in candidatas],
+                })
         if args.aplicar:
             db.commit()
         else:
